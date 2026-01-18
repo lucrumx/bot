@@ -2,6 +2,8 @@
 package auth
 
 import (
+	"errors"
+	"fmt"
 	"log"
 	"strconv"
 	"time"
@@ -10,7 +12,7 @@ import (
 	"github.com/lucrumx/bot/internal/utils"
 )
 
-// Claims represents the JWT claims.
+// Claims represent the JWT claims.
 type Claims struct {
 	Sub uint `json:"sub"`
 	jwt.RegisteredClaims
@@ -34,4 +36,27 @@ func GenerateJWT(userID uint) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, payload)
 
 	return token.SignedString([]byte(utils.GetEnv("JWT_SECRET", "")))
+}
+
+// ValidateJWT validates the given JWT and returns the claims if valid.
+func ValidateJWT(tokenString string) (*Claims, error) {
+	secret := utils.GetEnv("JWT_SECRET", "")
+
+	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (any, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+
+		return []byte(secret), nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	if claims, ok := token.Claims.(*Claims); ok && token.Valid {
+		return claims, nil
+	}
+
+	return nil, errors.New("Invalid token claims")
 }
