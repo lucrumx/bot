@@ -103,3 +103,16 @@ func (h *UserHandler) Login(c *gin.Context) {
 
 	c.JSON(http.StatusCreated, responses.ToLoginResponse(token))
 }
+
+// GetMe returns the authenticated user's information.
+func (h *UserHandler) GetMe(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
+
+	userID = userID.(uint)
+
+	c.JSON(http.StatusOK, gin.H{"user_id": userID})
+}
