@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+
 	"github.com/lucrumx/bot/internal/http/handlers"
 	"github.com/lucrumx/bot/internal/http/middleware"
 	"github.com/lucrumx/bot/internal/storage"

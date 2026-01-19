@@ -4,8 +4,9 @@ package testutils
 import (
 	"testing"
 
-	"github.com/lucrumx/bot/internal/storage"
 	"gorm.io/gorm"
+
+	"github.com/lucrumx/bot/internal/storage"
 )
 
 // SetupTestDB initializes a test database connection.
