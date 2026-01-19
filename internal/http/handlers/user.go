@@ -8,11 +8,12 @@ import (
 	"errors"
 
 	"github.com/gin-gonic/gin"
+	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
+
 	"github.com/lucrumx/bot/internal/auth"
 	"github.com/lucrumx/bot/internal/http/responses"
 	"github.com/lucrumx/bot/internal/models"
-	"golang.org/x/crypto/bcrypt"
-	"gorm.io/gorm"
 )
 
 // UserHandler handles user-related HTTP requests.

@@ -1,7 +1,7 @@
 .PHONY: fmt lint check run-api build
 
 fmt:
-	goimports -w .
+	goimports -w -local github.com/lucrumx/bot .
 	gofmt -w .
 
 lint:

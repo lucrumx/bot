@@ -6,10 +6,11 @@ import (
 
 	"fmt"
 
-	"github.com/lucrumx/bot/internal/models"
-	"github.com/lucrumx/bot/internal/utils"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+
+	"github.com/lucrumx/bot/internal/models"
+	"github.com/lucrumx/bot/internal/utils"
 )
 
 // InitDB initializes the database connection and runs migrations.
