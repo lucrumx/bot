@@ -1,5 +1,4 @@
-// Package responses provides structures and functions for creating HTTP responses.
-package responses
+package http
 
 import (
 	"time"

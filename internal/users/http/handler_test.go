@@ -1,26 +1,30 @@
-package handlers
+package http
 
 import (
 	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"net/http/httptest"
 	"testing"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
-	"gorm.io/gorm"
 
-	"github.com/lucrumx/bot/internal/testutils"
+	usersService "github.com/lucrumx/bot/internal/users/services"
+	"github.com/lucrumx/bot/internal/utils/testutils"
 )
 
-func setupRouter(db *gorm.DB) *gin.Engine {
+func setupRouter(t *testing.T) *gin.Engine {
+	db := testutils.SetupTestDB(t)
+	testutils.ClearTables(db, "users")
+
 	gin.SetMode(gin.TestMode)
 
 	r := gin.Default()
 
-	handler := NewUserHandler(db)
+	usersRepo := usersService.CreateUserRepo(db)
+	usersSrv := usersService.Create(usersRepo)
+	handler := Create(usersSrv)
 
 	r.POST("/users", handler.CreateUser)
 
@@ -28,20 +32,14 @@ func setupRouter(db *gorm.DB) *gin.Engine {
 }
 
 func TestCreateUser_Integration(t *testing.T) {
-	db := testutils.SetupTestDB(t)
-	testutils.ClearTables(db, "users")
-
-	router := setupRouter(db)
-
-	w := httptest.NewRecorder()
+	router := setupRouter(t)
 
 	userEmail := "test@test.com"
 
-	body := bytes.NewBuffer([]byte(fmt.Sprintf(`{"email": "%s", "password": "some-password"}`, userEmail)))
-	req, _ := http.NewRequest("POST", "/users", body)
-	req.Header.Set("Content-Type", "application/json")
-
-	router.ServeHTTP(w, req)
+	w := testutils.DoHTTPRequest(router, "POST", "/users",
+		bytes.NewBuffer([]byte(fmt.Sprintf(`{"email": "%s", "password": "some-password"}`, userEmail))).Bytes(),
+		map[string]string{"Content-type": "application/json"},
+	)
 
 	assert.Equal(t, http.StatusCreated, w.Code)
 
