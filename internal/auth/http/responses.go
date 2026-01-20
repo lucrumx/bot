@@ -1,4 +1,4 @@
-package responses
+package http
 
 // AuthResponse represents the data returned in response in POST /auth/login.
 type AuthResponse struct {

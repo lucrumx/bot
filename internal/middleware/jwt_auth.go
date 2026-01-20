@@ -6,7 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/lucrumx/bot/internal/auth"
+	"github.com/lucrumx/bot/internal/auth/services"
 )
 
 // JwtAuth is a middleware that checks for a valid JWT in the Authorization header.
@@ -23,7 +23,7 @@ func JwtAuth() gin.HandlerFunc {
 			tokenString = tokenString[7:]
 		}
 
-		claims, err := auth.ValidateJWT(tokenString)
+		claims, err := services.ValidateJWT(tokenString)
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token or expired"})
 			c.Abort()

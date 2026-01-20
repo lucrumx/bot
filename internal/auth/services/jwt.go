@@ -1,5 +1,4 @@
-// Package auth provides functionality for generating JSON Web Tokens (JWT) for user authentication.
-package auth
+package services
 
 import (
 	"errors"
