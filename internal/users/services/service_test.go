@@ -68,13 +68,4 @@ func TestUsersService_CreateUserSuccess(t *testing.T) {
 			}
 		})
 	}
-
-	/*repo := &fakeUserRepo{}
-	srv := Create(repo)
-
-	user, err := srv.CreateUser("some@email.com", "123456")
-
-	assert.NotNil(t, user)
-	assert.NoError(t, err)
-	assert.True(t, repo.createCalled)*/
 }
