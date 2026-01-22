@@ -1,4 +1,4 @@
-// Package services provides methods to authenticate users.
+// Package services provide methods to authenticate users.
 package services
 
 import (
