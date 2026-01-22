@@ -7,6 +7,8 @@ import (
 )
 
 // UserRepo provides methods to interact with the users table in the database.
+//
+//mockery:generate: true
 type UserRepo interface {
 	Create(*models.User) error
 	GetByID(uint) (*models.User, error)
