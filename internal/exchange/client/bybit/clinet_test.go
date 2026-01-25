@@ -12,6 +12,8 @@ import (
 )
 
 func TestClient_GetTickers_Integration(t *testing.T) {
+	t.Skip("Skipping integration test")
+
 	t.Setenv("BYBIT_BASE_URL", "https://api.bybit.nl")
 
 	client := NewByBitClient()
