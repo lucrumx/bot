@@ -25,7 +25,7 @@ func NewByBitClient() *Client {
 	}
 }
 
-// SubscribeTrades initiates WebSocket trade subscriptions for the given symbols and streams trades to the returned channel.
-func (c *Client) SubscribeTrades(ctx context.Context, symbols []string) (<-chan exchange.Trade, error) {
+// WsSubscribeTrades initiates WebSocket trade subscriptions for the given symbols and streams trades to the returned channel.
+func (c *Client) WsSubscribeTrades(ctx context.Context, symbols []string) (<-chan exchange.Trade, error) {
 	return c.WSManager.SubscribeTrades(ctx, symbols)
 }

@@ -10,10 +10,12 @@ import (
 
 	"github.com/gorilla/websocket"
 
+	"github.com/lucrumx/bot/internal/utils"
+
 	"github.com/lucrumx/bot/internal/exchange"
 )
 
-const linearPublicWsURL = "wss://stream.bybit.com/v5/public/linear"
+const linearPublicWsURL = "/v5/public/linear"
 const batchSize = 20
 const pingPongInterval = 20
 
@@ -29,7 +31,11 @@ type wsClient struct {
 }
 
 func newWsClient() *wsClient {
-	return &wsClient{url: linearPublicWsURL, Metrics: &Metrics{}}
+	baseURL := utils.GetEnv("BYBIT_WS_BASE_URL", "")
+	return &wsClient{
+		url:     baseURL + linearPublicWsURL,
+		Metrics: &Metrics{},
+	}
 }
 
 func (c *wsClient) Start(ctx context.Context, symbols []string, outChan chan<- exchange.Trade) error {
@@ -117,10 +123,16 @@ func (c *wsClient) readMessages(ctx context.Context, wsConn *websocket.Conn, out
 
 		_, messageByte, err := wsConn.ReadMessage()
 		if err != nil {
+			if ctx.Err() != nil {
+				// Not ReadMessage error, connection already closed
+				return
+			}
+
 			// TODO: тут по идее реконект
 			log.Printf("failed to read message: %v", err)
 			return
 		}
+
 		var message wsTradeMessageDTO
 		if err := json.Unmarshal(messageByte, &message); err != nil {
 			log.Printf("failed to unmarshal message: %v", err)

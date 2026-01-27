@@ -15,6 +15,6 @@ type wsTradeDTO struct {
 type wsTradeMessageDTO struct {
 	Topic string       `json:"topic"`
 	Typ   string       `json:"type"`
-	Ts    string       `json:"ts"`
+	Ts    int64        `json:"ts"`
 	Data  []wsTradeDTO `json:"data"`
 }
