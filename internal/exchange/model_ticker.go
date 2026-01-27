@@ -36,4 +36,7 @@ type Ticker struct {
 
 	// Денежная стоимость открытых контрактов
 	OpenInterestValue decimal.Decimal
+
+	// Оборот за 24h
+	Turnover24h decimal.Decimal
 }

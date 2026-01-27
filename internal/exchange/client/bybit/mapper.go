@@ -45,6 +45,9 @@ func mapTicker(d TickerDTO) (exchange.Ticker, error) {
 	if t.OpenInterestValue, err = parseDecimal(d.OpenInterestValue); err != nil {
 		return t, fmt.Errorf("OpenInterestValue: %w", err)
 	}
+	if t.Turnover24h, err = parseDecimal(d.Turnover24h); err != nil {
+		return t, fmt.Errorf("turnover24h: %w", err)
+	}
 
 	return t, nil
 }
