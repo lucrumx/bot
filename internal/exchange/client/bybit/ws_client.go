@@ -111,7 +111,7 @@ func (c *wsClient) pingPong(ctx context.Context, wsConn *websocket.Conn) {
 func (c *wsClient) readMessages(ctx context.Context, wsConn *websocket.Conn, outChan chan<- exchange.Trade) {
 	defer func() {
 		err := wsConn.Close()
-		if err != nil {
+		if err != nil && ctx.Err() == nil { // log only if context did not close the connection (context still alive)
 			log.Printf("failed to close websocket connection: %v", err)
 		}
 	}()

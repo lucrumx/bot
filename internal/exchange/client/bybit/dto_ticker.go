@@ -16,4 +16,5 @@ type TickerDTO struct {
 	Volume1m          string `json:"volume1m"`
 	Volume5m          string `json:"volume5m"`
 	Volume15m         string `json:"volume15m"`
+	Turnover24h       string `json:"turnover24h"`
 }

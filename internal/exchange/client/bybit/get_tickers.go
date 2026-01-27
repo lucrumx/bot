@@ -39,7 +39,7 @@ func (c *Client) GetTickers(ctx context.Context, symbols []string, category exch
 	}
 
 	q := req.URL.Query()
-	if len(symbols) == 0 {
+	if len(symbols) > 0 {
 		q.Set("symbols", strings.Join(symbols, ","))
 	}
 	q.Set("category", string(category))
