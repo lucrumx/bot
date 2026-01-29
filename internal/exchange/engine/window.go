@@ -45,7 +45,7 @@ func (w *Window) AddTrade(trade exchange.Trade) {
 
 	bucket := &w.buckets[idx]
 
-	if bucket.timestamp == tsSec { // bucket устарел, тк минута та же (idx), но секунда другая, поэтмоу нужно обнулить
+	if bucket.timestamp != tsSec { // bucket устарел, тк минута та же (idx), но секунда другая, поэтмоу нужно обнулить
 		bucket.timestamp = tsSec
 		bucket.volumeUSDT = decimal.Zero
 		bucket.count = 0

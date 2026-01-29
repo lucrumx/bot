@@ -133,7 +133,7 @@ func (b *Bot) StartBot(ctx context.Context) (<-chan exchange.Trade, error) {
 func (b *Bot) filterTickers(tickers []exchange.Ticker) []string {
 	b.logger.Info().Msgf("bot engine: got %d tickers", len(tickers))
 
-	var filteredTickers []string
+	filteredTickers := make([]string, 0, len(tickers))
 	for _, ticker := range tickers {
 		if !strings.HasSuffix(ticker.Symbol, "USDT") {
 			continue
