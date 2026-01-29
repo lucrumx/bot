@@ -36,8 +36,8 @@ func main() {
 
 	log.Info().Msg("Bot started. Waiting for pumps...")
 
-	// for trade: = range inChanTrades {
-	for range inChanTrades {
+	for trade := range inChanTrades {
+		_ = trade
 		/* log.Debug().Msg(fmt.Sprintf("Received trade: %-15s | ts: %-13s | price: %8s | volume: %10s | in usdt: %10s | side: %-4s",
 			trade.Symbol,
 			strconv.FormatInt(trade.Ts, 10),

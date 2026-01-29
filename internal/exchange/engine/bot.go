@@ -4,10 +4,12 @@ package engine
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/shopspring/decimal"
 
@@ -24,9 +26,9 @@ const (
 	MinTrades3s = 20
 
 	// MinVolume1s - абсолютный минимум объема за 1 сек (USDT)
-	MinVolume1s = 20_000
+	MinVolume1s = 500
 	// MinVolume3s - абсолютный минимум объема за 3 сек (USDT)
-	MinVolume3s = 50_000
+	MinVolume3s = 1_500
 
 	// PriceDelta1s - минимальный рост цены за 1 сек (в процентах, 0.4 = 0.4%)
 	PriceDelta1s = 0.4
@@ -47,6 +49,8 @@ type Bot struct {
 	kFactor      decimal.Decimal
 	absMinVolume decimal.Decimal
 	startTime    time.Time
+
+	logger zerolog.Logger
 }
 
 // NewBot creates a new Bot (constructor).
@@ -67,13 +71,15 @@ func NewBot(provider exchange.Provider) *Bot {
 		windows:      map[string]*Window{},
 		kFactor:      kFactor,
 		absMinVolume: absMinVolume,
+
+		logger: log.Output(zerolog.ConsoleWriter{Out: os.Stderr}),
 	}
 }
 
 // StartBot starts the bot engine and returns a channel of trades.
 func (b *Bot) StartBot(ctx context.Context) (<-chan exchange.Trade, error) {
 	b.startTime = time.Now()
-	log.Print("bot engine: starting bot")
+	b.logger.Info().Msg("bot engine: starting bot")
 
 	log.Print("bot engine: getting tickers")
 	tickers, err := b.provider.GetTickers(ctx, nil, exchange.CategoryLinear)
@@ -85,14 +91,17 @@ func (b *Bot) StartBot(ctx context.Context) (<-chan exchange.Trade, error) {
 		return nil, fmt.Errorf("bot engine: no tickers found")
 	}
 
-	filteredTickers := filterTickers(*tickers)
+	filteredTickers := b.filterTickers(*tickers)
+
+	b.logger.Info().Msg("bot engine: filtered tickers")
+	b.logger.Info().Msg(strings.Join(filteredTickers, ","))
 
 	sourceChan, err := b.provider.SubscribeTrades(ctx, filteredTickers)
 	if err != nil {
 		return nil, err
 	}
 
-	log.Printf("bot engine: starting trade processor and collection statistics for %d seconds", windowSize)
+	b.logger.Info().Msgf("bot engine: starting trade processor and collection statistics for %d seconds", windowSize)
 
 	outChan := make(chan exchange.Trade, 10000)
 
@@ -106,15 +115,13 @@ func (b *Bot) StartBot(ctx context.Context) (<-chan exchange.Trade, error) {
 				if !ok {
 					return
 				}
-				// Анализируем
 				b.processTrade(trade)
 
-				// Пробрасываем наружу (неблокирующе или с буфером)
+				// Пробрасываем дальше
 				select {
 				case outChan <- trade:
 				default:
-					// Если получатель (main) тормозит, мы не блокируем работу бота,
-					// но данные в main могут пропадать. Это допустимо для логов.
+					// если обработка outChan тормозит- данные пропадут
 				}
 			}
 		}
@@ -123,17 +130,17 @@ func (b *Bot) StartBot(ctx context.Context) (<-chan exchange.Trade, error) {
 	return outChan, nil
 }
 
-func filterTickers(tickers []exchange.Ticker) []string {
-	log.Printf("bot engine: got %d tickers", len(tickers))
+func (b *Bot) filterTickers(tickers []exchange.Ticker) []string {
+	b.logger.Info().Msgf("bot engine: got %d tickers", len(tickers))
 
 	var filteredTickers []string
 	for _, ticker := range tickers {
 		if !strings.HasSuffix(ticker.Symbol, "USDT") {
 			continue
 		}
-		// Фильтр по Turnover24h (оборот в деньгах), а не OpenInterest
-		minTurnover := decimal.NewFromInt(800_000)    // $800k
-		maxTurnover := decimal.NewFromInt(10_000_000) // $10m
+		// Фильтр по Turnover24h (оборот в деньгах)
+		minTurnover := decimal.NewFromInt(80_000)    //nolint:goimports    // $800k
+		maxTurnover := decimal.NewFromInt(1_500_000) // $10m
 
 		if ticker.Turnover24h.LessThan(minTurnover) || ticker.Turnover24h.GreaterThan(maxTurnover) {
 			continue
@@ -142,7 +149,7 @@ func filterTickers(tickers []exchange.Ticker) []string {
 		filteredTickers = append(filteredTickers, ticker.Symbol)
 	}
 
-	log.Printf("bot engine: %d tickers left after filtering", len(filteredTickers))
+	b.logger.Info().Msgf("bot engine: %d tickers left after filtering", len(filteredTickers))
 	return filteredTickers
 }
 
@@ -215,7 +222,7 @@ func (b *Bot) checkPump(symbol string, win *Window) {
 		decimal.NewFromInt(stats1s.tradeCount).GreaterThan(threshTrades1s) &&
 		stats1s.priceChangePcnt.GreaterThan(threshPrice1s) {
 
-		log.Warn().
+		b.logger.Warn().
 			Str("pair", symbol).
 			Str("type", "FLASH_PUMP_1S").
 			Str("price_change", stats1s.priceChangePcnt.StringFixed(2)+"%").
@@ -249,7 +256,7 @@ func (b *Bot) checkPump(symbol string, win *Window) {
 		decimal.NewFromInt(stats3s.tradeCount).GreaterThan(threshTrades3s) &&
 		stats3s.priceChangePcnt.GreaterThan(threshPrice3s) {
 
-		log.Warn().
+		b.logger.Warn().
 			Str("pair", symbol).
 			Str("type", "MOMENTUM_PUMP_3S").
 			Str("price_change", stats3s.priceChangePcnt.StringFixed(2)+"%").
