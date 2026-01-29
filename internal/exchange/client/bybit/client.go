@@ -13,7 +13,7 @@ import (
 type Client struct {
 	baseURL   string
 	http      *http.Client
-	WSManager *WSManager
+	wsManager *WSManager
 }
 
 // NewByBitClient creates a new ByBitClient.
@@ -21,11 +21,11 @@ func NewByBitClient() *Client {
 	return &Client{
 		baseURL:   utils.GetEnv("BYBIT_BASE_URL", ""),
 		http:      &http.Client{},
-		WSManager: NewWSManager(),
+		wsManager: NewWSManager(),
 	}
 }
 
-// WsSubscribeTrades initiates WebSocket trade subscriptions for the given symbols and streams trades to the returned channel.
-func (c *Client) WsSubscribeTrades(ctx context.Context, symbols []string) (<-chan exchange.Trade, error) {
-	return c.WSManager.SubscribeTrades(ctx, symbols)
+// SubscribeTrades initiates WebSocket trade subscriptions for the given symbols and streams trades to the returned channel.
+func (c *Client) SubscribeTrades(ctx context.Context, symbols []string) (<-chan exchange.Trade, error) {
+	return c.wsManager.SubscribeTrades(ctx, symbols)
 }
