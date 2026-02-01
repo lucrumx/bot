@@ -11,7 +11,7 @@ import (
 )
 
 func TestWindow(t *testing.T) {
-	window := NewWindow()
+	window := NewWindow(300)
 
 	nowTs := time.Now().UnixMilli()
 
@@ -33,7 +33,7 @@ func TestWindow(t *testing.T) {
 		Ts:         nowTs,
 	})
 
-	idx := (nowTs / 1000) % windowSize
+	idx := (nowTs / 1000) % window.windowSize
 	bucket := window.buckets[idx]
 
 	assert.Equal(t, int64(2), bucket.count)

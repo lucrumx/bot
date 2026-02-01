@@ -9,8 +9,6 @@ import (
 	"github.com/lucrumx/bot/internal/exchange"
 )
 
-const windowSize = 300 // пять минут
-
 type tradeBucket struct {
 	timestamp         int64           // Unix timestamp in seconds
 	volumeUSDT        decimal.Decimal // Объем в
@@ -22,15 +20,17 @@ type tradeBucket struct {
 
 // Window represents a time window of trades.
 type Window struct {
-	mu      sync.Mutex
-	buckets [windowSize]tradeBucket
+	mu         sync.Mutex
+	buckets    []tradeBucket
+	windowSize int64
 }
 
 // NewWindow creates a new time window.
-func NewWindow() *Window {
+func NewWindow(size int) *Window {
 	return &Window{
-		buckets: [windowSize]tradeBucket{},
-		mu:      sync.Mutex{},
+		windowSize: int64(size),
+		buckets:    make([]tradeBucket, size),
+		mu:         sync.Mutex{},
 	}
 }
 
@@ -41,7 +41,7 @@ func (w *Window) AddTrade(trade exchange.Trade) {
 
 	//
 	tsSec := trade.Ts / 1000
-	idx := tsSec % windowSize // остаток от деления на размер окна, всегда будет от 0 до 59, потому что кратно минуте
+	idx := tsSec % w.windowSize // остаток от деления на размер окна, всегда будет от 0 до 59, потому что кратно минуте
 
 	bucket := &w.buckets[idx]
 
@@ -80,7 +80,7 @@ func (w *Window) GetStatistics(seconds int) (d Statistics) {
 
 	for i := 0; i < seconds; i++ {
 		ts := now - int64(i) // если i = 0, то now - 0 - это текущая секунда
-		idx := ts % windowSize
+		idx := ts % w.windowSize
 		bucket := &w.buckets[idx]
 
 		if bucket.timestamp != ts { // если bucket устарел или пуст, пропускаем
