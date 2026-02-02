@@ -3,72 +3,72 @@
 ![Go Version](https://img.shields.io/badge/Go-1.24-00ADD8?style=flat&logo=go)
 ![Build Status](https://img.shields.io/github/actions/workflow/status/lucrumx/bot/tests.yml?branch=main)
 
-Высокопроизводительный бот для обнаружения рыночных аномалий на **Bybit Linear Futures** (USDT) в реальном времени. Система отслеживает динамику изменения цен, выявляя сильные импульсные движения (пампы) с использованием интеллектуальной системы фильтрации и уведомлений.
+A high-performance real-time market anomaly detector for **Bybit Linear Futures** (USDT). The system monitors price dynamics to identify significant momentum movements (pumps) using optimized sliding window logic and intelligent alerting.
 
-## 🚀 Основные возможности
+## 🚀 Core Features
 
-- **Momentum Detection (15m)**: Отслеживание значимых ценовых импульсов за 15-минутные интервалы (по умолчанию 15% роста).
-- **Intelligent Alerting**: 
-  - **Alert Step**: Система повторных уведомлений при продолжении роста (например, каждые +5% после первого сигнала).
-  - **Cooldown**: Защита от спама и повторных сигналов на одном и том же движении.
-- **Continuous Sliding Window**: Кастомная реализация кольцевого буфера с механизмом **Gap Filling** (автоматическое заполнение пропусков в данных при отсутствии сделок), что обеспечивает непрерывность анализа.
-- **Multi-channel Notifier**: Интеграция с Telegram для мгновенных алертов с поддержкой HTML-разметки.
-- **O(1) Performance**: Алгоритм проверки условий пампа оптимизирован для работы за константное время, что позволяет мониторить сотни торговых пар с минимальной нагрузкой на CPU.
-- **WebSocket Orchestration**: Эффективное управление потоками данных с автоматическим переподключением и распределением подписок по чанкам.
+- **Momentum Detection (15m)**: Tracks significant price impulses over configurable intervals (e.g., 15% growth over 15 minutes).
+- **Intelligent Alerting System**: 
+  - **Alert Step**: Sends follow-up notifications if the price continues to rise (e.g., every +5% after the initial signal).
+  - **Cooldown**: Prevents spam and redundant signals for the same price movement.
+- **Continuous Sliding Window**: Custom ring-buffer implementation with **Gap Filling** mechanism (automatically populates missing data points during low liquidity), ensuring seamless analysis.
+- **Multi-channel Notifier**: Telegram integration for instant alerts with HTML formatting support.
+- **O(1) Performance**: Detection logic is optimized for constant time complexity, allowing monitoring of hundreds of tickers with minimal CPU overhead.
+- **WebSocket Orchestration**: Efficient data stream management with automatic reconnection and chunked subscription handling.
 
-## 🛠 Технологический стек
+## 🛠 Tech Stack
 
-- **Язык**: Go 1.24.
-- **Транспорт**: Bybit V5 REST & WebSocket API.
-- **Инфраструктура**: Telegram Bot API для уведомлений.
-- **Математика**: `shopspring/decimal` для прецизионных финансовых вычислений.
-- **Логирование**: `zerolog` (структурированный JSON логгинг).
-- **База данных**: PostgreSQL + GORM (для Management API).
+- **Language**: Go 1.24.
+- **Transport**: Bybit V5 REST & WebSocket API.
+- **Notifications**: Telegram Bot API.
+- **Math**: `shopspring/decimal` for fixed-point financial precision.
+- **Logging**: `zerolog` (structured JSON logging).
+- **Storage**: PostgreSQL + GORM (for Management API).
 
-## 🏗 Структура проекта
+## 🏗 Project Structure
 
-Проект следует стандартам организации Go-приложений с разделением на доменные слои:
+The project follows a modular Go layout with a focus on domain-driven design:
 
-- `cmd/`: Точки входа (бот и API сервер).
-- `internal/exchange/`: Логика взаимодействия с биржей, Bybit адаптер и ядро анализа (`engine`).
-- `internal/notifier/`: Система уведомлений (интерфейс Notifier и реализация Telegram).
-- `internal/utils/`: Общие утилиты, работа с конфигурацией и окружением.
-- `internal/auth/ & internal/users/`: Сервисы аутентификации и управления пользователями.
+- `cmd/`: Application entry points (`bot` and `api`).
+- `internal/exchange/`: Core trading domain, exchange adapters (Bybit), and detection engine.
+- `internal/notifier/`: Notification system (Notifier interface and Telegram implementation).
+- `internal/utils/`: Common utilities, environment, and configuration helpers.
+- `internal/auth/ & internal/users/`: Authentication and user management services.
 
-## 🧪 Тестирование и качество
+## 🧪 Testing & Quality Control
 
-- **Unit Tests**: Покрытие ключевой логики (кольцевой буфер, механизм Gap Filling, логика алертов).
-- **Integration Tests**: Проверка интеграции с Telegram API (через мок-серверы) и тестирование БД в Docker-окружении.
-- **Strict Linting**: Использование `golangci-lint` с жесткими правилами для обеспечения качества кода.
+- **Unit Tests**: Comprehensive coverage for core logic (Sliding Window, Gap Filling, Alert Logic).
+- **Integration Tests**: Telegram API integration via mock servers and database testing in Docker environments.
+- **Strict Linting**: Enforced code quality via `golangci-lint` with strict configurations.
 
-## ⚙️ Конфигурация (.env)
+## ⚙️ Configuration (.env)
 
-Поведение бота настраивается через переменные окружения:
+System behavior is managed via environment variables:
 
-- `PUMP_INTERVAL`: Интервал анализа в секундах (например, 900 для 15 минут).
-- `TARGET_PRICE_CHANGE`: Целевой процент роста для первого сигнала (например, 15).
-- `ALERT_STEP`: Шаг цены для повторных уведомлений в рамках одного пампа (например, 5).
-- `CHECK_INTERVAL`: Частота проверки условий в секундах.
-- `FILTER_TICKERS_TURNOVER`: Фильтрация монет по суточному обороту (USDT).
-- `TELEGRAM_BOT_TOKEN`: Токен вашего бота от @BotFather.
-- `TELEGRAM_CHAT_ID`: ID чата или канала для уведомлений.
+- `PUMP_INTERVAL`: Analysis interval in seconds (e.g., 900 for 15 minutes).
+- `TARGET_PRICE_CHANGE`: Target percentage growth for the initial signal (e.g., 15).
+- `ALERT_STEP`: Percentage step for follow-up notifications (e.g., 5).
+- `CHECK_INTERVAL`: Frequency of price checks in seconds.
+- `FILTER_TICKERS_TURNOVER`: Filter tickers by 24h turnover (USDT).
+- `TELEGRAM_BOT_TOKEN`: Your bot token from @BotFather.
+- `TELEGRAM_CHAT_ID`: Destination chat or channel ID.
 
-## 🚦 Быстрый старт
+## 🚦 Getting Started
 
-1. **Подготовка**:
+1. **Clone & Setup**:
    ```bash
    git clone https://github.com/lucrumx/bot.git
    cp .env.dist .env
    ```
-2. **Установка зависимостей**:
+2. **Install Dependencies**:
    ```bash
    go mod download
    ```
-3. **Запуск тестов**:
+3. **Run Tests**:
    ```bash
    make test
    ```
-4. **Запуск бота**:
+4. **Launch Bot**:
    ```bash
    make run-bot
    ```
