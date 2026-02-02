@@ -11,6 +11,8 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
+	notifier2 "github.com/lucrumx/bot/internal/notifier"
+
 	"github.com/lucrumx/bot/internal/exchange/client/bybit"
 	"github.com/lucrumx/bot/internal/exchange/engine"
 )
@@ -23,8 +25,10 @@ func main() {
 		log.Warn().Msg("No .env file found, hope environment variables are set")
 	}
 
+	notifier := notifier2.NewTelegramNotifier()
+
 	client := bybit.NewByBitClient()
-	bot := engine.NewBot(client)
+	bot := engine.NewBot(client, notifier)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
