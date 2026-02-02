@@ -3,75 +3,72 @@
 ![Go Version](https://img.shields.io/badge/Go-1.24-00ADD8?style=flat&logo=go)
 ![Build Status](https://img.shields.io/github/actions/workflow/status/lucrumx/bot/tests.yml?branch=main)
 
-A high-frequency trading bot designed for real-time market anomaly detection on **Bybit Linear Futures** (USDT). The system monitors price and volume dynamics to identify explosive movements (pumps) using adaptive threshold logic.
+Высокопроизводительный бот для обнаружения рыночных аномалий на **Bybit Linear Futures** (USDT) в реальном времени. Система отслеживает динамику изменения цен, выявляя сильные импульсные движения (пампы) с использованием интеллектуальной системы фильтрации и уведомлений.
 
-## 🚀 Core Features
+## 🚀 Основные возможности
 
-- **Real-time Detection Engine**: 
-  - **Flash Pump (1s)**: Captures immediate price/volume spikes.
-  - **Momentum Pump (3s)**: Detects sustained trend-based movements.
-- **Adaptive Thresholds**: Dynamic signal filtering based on a 5-minute rolling average of volume and trade count, multiplied by a configurable `K-Factor`.
-- **High-Performance Sliding Window**: Custom ring-buffer implementation for O(1) statistics calculation.
-- **WebSocket Orchestration**: Efficient management of multiple ticker streams with automatic reconnection.
-- **Modular Architecture**: Strict separation of concerns using Vertical Slicing and Dependency Injection.
+- **Momentum Detection (15m)**: Отслеживание значимых ценовых импульсов за 15-минутные интервалы (по умолчанию 15% роста).
+- **Intelligent Alerting**: 
+  - **Alert Step**: Система повторных уведомлений при продолжении роста (например, каждые +5% после первого сигнала).
+  - **Cooldown**: Защита от спама и повторных сигналов на одном и том же движении.
+- **Continuous Sliding Window**: Кастомная реализация кольцевого буфера с механизмом **Gap Filling** (автоматическое заполнение пропусков в данных при отсутствии сделок), что обеспечивает непрерывность анализа.
+- **Multi-channel Notifier**: Интеграция с Telegram для мгновенных алертов с поддержкой HTML-разметки.
+- **O(1) Performance**: Алгоритм проверки условий пампа оптимизирован для работы за константное время, что позволяет мониторить сотни торговых пар с минимальной нагрузкой на CPU.
+- **WebSocket Orchestration**: Эффективное управление потоками данных с автоматическим переподключением и распределением подписок по чанкам.
 
-## 🛠 Tech Stack
+## 🛠 Технологический стек
 
-- **Language**: Go 1.24 (utilizing latest concurrency primitives).
-- **Transport**: Bybit V5 REST & WebSocket API.
-- **Web Framework**: Gin Gonic (for Management API).
-- **Storage**: PostgreSQL + GORM.
-- **Math**: `shopspring/decimal` for fixed-point financial precision.
-- **Logging**: `zerolog` (structured JSON logging).
+- **Язык**: Go 1.24.
+- **Транспорт**: Bybit V5 REST & WebSocket API.
+- **Инфраструктура**: Telegram Bot API для уведомлений.
+- **Математика**: `shopspring/decimal` для прецизионных финансовых вычислений.
+- **Логирование**: `zerolog` (структурированный JSON логгинг).
+- **База данных**: PostgreSQL + GORM (для Management API).
 
-## 🏗 Project Structure
+## 🏗 Структура проекта
 
-The project follows the standard Go layout with a focus on domain-driven design:
+Проект следует стандартам организации Go-приложений с разделением на доменные слои:
 
-- `cmd/`: Application entry points (`bot` and `api`).
-- `internal/exchange/`: Core trading domain, exchange adapters (Bybit), and engine.
-- `internal/auth/ & internal/users/`: Authentication and user management services.
-- `internal/models/`: GORM database entities.
-- `internal/storage/`: Database initialization and migrations.
+- `cmd/`: Точки входа (бот и API сервер).
+- `internal/exchange/`: Логика взаимодействия с биржей, Bybit адаптер и ядро анализа (`engine`).
+- `internal/notifier/`: Система уведомлений (интерфейс Notifier и реализация Telegram).
+- `internal/utils/`: Общие утилиты, работа с конфигурацией и окружением.
+- `internal/auth/ & internal/users/`: Сервисы аутентификации и управления пользователями.
 
-## 🧪 Development & Quality Control
+## 🧪 Тестирование и качество
 
-### Testing Strategy
-- **Unit Tests**: Coverage for core logic (Sliding Window, Pump Detection) using `testify` and `mockery`.
-- **Integration Tests**: End-to-end database and API testing using **Docker Compose** for ephemeral environments.
+- **Unit Tests**: Покрытие ключевой логики (кольцевой буфер, механизм Gap Filling, логика алертов).
+- **Integration Tests**: Проверка интеграции с Telegram API (через мок-серверы) и тестирование БД в Docker-окружении.
+- **Strict Linting**: Использование `golangci-lint` с жесткими правилами для обеспечения качества кода.
 
-### Tooling (Makefile)
-The project includes a robust `Makefile` for a standardized development workflow:
-- `make lint`: Runs `golangci-lint` with strict configurations.
-- `make test`: Executes all unit tests.
-- `make test-integration`: Runs integration tests in a Docker environment.
-- `make run-bot`: Starts the pump detector engine.
-- `make build`: Compiles production binaries.
+## ⚙️ Конфигурация (.env)
 
-## ⚙️ Configuration
+Поведение бота настраивается через переменные окружения:
 
-System behavior is managed via environment variables:
-- `K_FACTOR`: Multiplier for adaptive volume thresholds.
-- `ABS_MIN_VOLUME`: Absolute minimum USDT volume to filter noise.
-- `DB_DSN`: PostgreSQL connection string.
-- `JWT_SECRET`: Secret key for API authentication.
+- `PUMP_INTERVAL`: Интервал анализа в секундах (например, 900 для 15 минут).
+- `TARGET_PRICE_CHANGE`: Целевой процент роста для первого сигнала (например, 15).
+- `ALERT_STEP`: Шаг цены для повторных уведомлений в рамках одного пампа (например, 5).
+- `CHECK_INTERVAL`: Частота проверки условий в секундах.
+- `FILTER_TICKERS_TURNOVER`: Фильтрация монет по суточному обороту (USDT).
+- `TELEGRAM_BOT_TOKEN`: Токен вашего бота от @BotFather.
+- `TELEGRAM_CHAT_ID`: ID чата или канала для уведомлений.
 
-## 🚦 Getting Started
+## 🚦 Быстрый старт
 
-1. **Clone & Setup**:
+1. **Подготовка**:
    ```bash
    git clone https://github.com/lucrumx/bot.git
    cp .env.dist .env
    ```
-2. **Install Dependencies**:
+2. **Установка зависимостей**:
    ```bash
    go mod download
    ```
-3. **Run Tests**:
+3. **Запуск тестов**:
    ```bash
    make test
    ```
-4. **Launch Bot**:
+4. **Запуск бота**:
    ```bash
    make run-bot
    ```
