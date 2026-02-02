@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -18,27 +19,6 @@ import (
 	"github.com/lucrumx/bot/internal/exchange"
 )
 
-// Константы порогов (Thresholds) ---
-const (
-	// MinTrades1s - минимальное кол-во сделок за 1 сек для сигнала
-	MinTrades1s = 10
-	// MinTrades3s - минимальное кол-во сделок за 3 сек
-	MinTrades3s = 20
-
-	// MinVolume1s - абсолютный минимум объема за 1 сек (USDT)
-	MinVolume1s = 500
-	// MinVolume3s - абсолютный минимум объема за 3 сек (USDT)
-	MinVolume3s = 1_500
-
-	// PriceDelta1s - минимальный рост цены за 1 сек (в процентах, 0.4 = 0.4%)
-	PriceDelta1s = 0.4
-	// PriceDelta3s - минимальный рост цены за 3 сек (в процентах, 1.0 = 1%)
-	PriceDelta3s = 1.0
-
-	// StartUpDelay - время накопления статистики перед началом сигналов
-	StartUpDelay = 10 * time.Second
-)
-
 // Bot represents a bot engine.
 type Bot struct {
 	provider exchange.Provider
@@ -46,31 +26,48 @@ type Bot struct {
 	mutex   sync.Mutex
 	windows map[string]*Window
 
-	kFactor      decimal.Decimal
-	absMinVolume decimal.Decimal
-	startTime    time.Time
+	filterTickersByTurnover decimal.Decimal
+	pumpInterval            int
+	targetPriceChange       float64
+	startupDelay            time.Duration
+
+	startTime time.Time
 
 	logger zerolog.Logger
 }
 
 // NewBot creates a new Bot (constructor).
 func NewBot(provider exchange.Provider) *Bot {
-	kFactor, err := decimal.NewFromString(utils.GetEnv("K_FACTOR", ""))
+	rawTurnover := strings.ReplaceAll(utils.GetEnv("FILTER_TICKERS_TURNOVER", ""), "_", "")
+	filterTickersByTurnover, err := decimal.NewFromString(rawTurnover)
 	if err != nil {
-		log.Fatal().Err(err).Msg("failed to parse K_FACTOR evn")
+		log.Fatal().Err(err).Msg("failed to parse FILTER_TICKERS_TURNOVER evn")
 	}
 
-	absMinVolume, err := decimal.NewFromString(utils.GetEnv("ABS_MIN_VOLUME", ""))
+	pumpInterval, err := strconv.Atoi(utils.GetEnv("PUMP_INTERVAL", ""))
 	if err != nil {
-		log.Fatal().Err(err).Msg("failed to parse ABS_MIN_VOLUME evn")
+		log.Fatal().Err(err).Msg("failed to parse PUMP_INTERVAL evn")
+	}
+
+	targetPriceChange, err := strconv.ParseFloat(utils.GetEnv("TARGET_PRICE_CHANGE", ""), 64)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to parse TARGET_PRICE_CHANGE evn")
+	}
+
+	startupDelay, err := strconv.ParseFloat(utils.GetEnv("STARTUP_DELAY", ""), 64)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to parse STARTUP_DELAY evn")
 	}
 
 	return &Bot{
-		provider:     provider,
-		mutex:        sync.Mutex{},
-		windows:      map[string]*Window{},
-		kFactor:      kFactor,
-		absMinVolume: absMinVolume,
+		provider: provider,
+		mutex:    sync.Mutex{},
+		windows:  map[string]*Window{},
+
+		filterTickersByTurnover: filterTickersByTurnover,
+		pumpInterval:            pumpInterval,
+		targetPriceChange:       targetPriceChange,
+		startupDelay:            time.Duration(startupDelay) * time.Second,
 
 		logger: log.Output(zerolog.ConsoleWriter{Out: os.Stderr}),
 	}
@@ -101,7 +98,7 @@ func (b *Bot) StartBot(ctx context.Context) (<-chan exchange.Trade, error) {
 		return nil, err
 	}
 
-	b.logger.Info().Msgf("bot engine: starting trade processor and collection statistics for %d seconds", windowSize)
+	b.logger.Info().Msgf("bot engine: starting trade processor and collection statistics for %d seconds", b.pumpInterval)
 
 	outChan := make(chan exchange.Trade, 10000)
 
@@ -138,11 +135,8 @@ func (b *Bot) filterTickers(tickers []exchange.Ticker) []string {
 		if !strings.HasSuffix(ticker.Symbol, "USDT") {
 			continue
 		}
-		// Фильтр по Turnover24h (оборот в деньгах)
-		minTurnover := decimal.NewFromInt(80_000)    //nolint:goimports    // $800k
-		maxTurnover := decimal.NewFromInt(1_500_000) // $10m
 
-		if ticker.Turnover24h.LessThan(minTurnover) || ticker.Turnover24h.GreaterThan(maxTurnover) {
+		if ticker.Turnover24h.GreaterThan(b.filterTickersByTurnover) {
 			continue
 		}
 
@@ -157,7 +151,7 @@ func (b *Bot) processTrade(trade exchange.Trade) {
 	b.mutex.Lock()
 	window, ok := b.windows[trade.Symbol]
 	if !ok {
-		window = NewWindow()
+		window = NewWindow(b.pumpInterval)
 		b.windows[trade.Symbol] = window
 	}
 	b.mutex.Unlock()
@@ -166,103 +160,22 @@ func (b *Bot) processTrade(trade exchange.Trade) {
 	b.checkPump(trade.Symbol, window)
 }
 
-/*
-/*
-checkPump — сердце детектора аномальной активности.
-
-Принцип работы адаптивных порогов:
-Не используем жесткие цифры для всех монет, потому что $50,000 объема для BTC — это шум,
-а для мелкого альткоина — начало пампа.
-
-Принцип работы:
- 1. База: Считаем средний объем и количество сделок в секунду за последние windowSize (см window.go), сейчас это
-    300 сек (5 мин). Это фон или нормальное состояние конкретного тикера.
- 2. Адаптивность: Умножаем фон на коэффициент K (kFactor, например 8) (из env).
-    Так мы получаем порог, который в 8 раз выше обычного состояния этой монеты.
- 3. Фильтрация шума: Используем абсолютные минимумы (MinVolume, MinTrades).
-    Это нужно, чтобы не реагировать на случайные сделки в $10 на совсем «мертвых» парах,
-    где даже одна покупка может превысить среднее значение в 100 раз.
-
-Сигнал срабатывает, если за 1 или 3 секунды одновременно:
-- Объем превысил Адаптивный Порог И Абсолютный Минимум.
-- Количество сделок превысило Адаптивный Порог И Абсолютный Минимум.
-- Цена выросла более чем на заданный процент.
-*/
 func (b *Bot) checkPump(symbol string, win *Window) {
-	// Не даем сигналы первые N секунд, чтобы накопилась статистика
-	if time.Since(b.startTime) < StartUpDelay {
+	if time.Since(b.startTime) < b.startupDelay {
 		return
 	}
 
-	// 0. Базовые показатели за весь период окна (windowSize из window.go)
-	// В Go, если константа в том же пакете, регистр должен совпадать.
-	// Если в window.go она lowercase (windowSize), то и тут должна быть такой же.
-	statsBase := win.GetStatistics(windowSize)
+	stats := win.GetStatistics(b.pumpInterval)
 
-	// Средние показатели в секунду (Норма)
-	avgVolPerSec := statsBase.totalVolumeUSDT.Div(decimal.NewFromInt(windowSize))
-	avgTradesPerSec := decimal.NewFromInt(statsBase.tradeCount).Div(decimal.NewFromInt(windowSize))
+	threshPrice := decimal.NewFromFloat(b.targetPriceChange)
 
-	k := b.kFactor
-
-	// 1: 1 секундный памп
-	// ловит мгновенные "палки" вверх
-	stats1s := win.GetStatistics(1)
-
-	// Порог объема: берем максимум между жестким минимумом и (среднее * K)
-	threshVol1s := decimal.Max(decimal.NewFromInt(MinVolume1s), avgVolPerSec.Mul(k))
-
-	// Порог сделок: берем максимум между жестким минимумом и (среднее * K)
-	threshTrades1s := decimal.Max(decimal.NewFromInt(MinTrades1s), avgTradesPerSec.Mul(k))
-
-	// Порог цены: фиксированный
-	threshPrice1s := decimal.NewFromFloat(PriceDelta1s)
-
-	if stats1s.totalVolumeUSDT.GreaterThan(threshVol1s) &&
-		decimal.NewFromInt(stats1s.tradeCount).GreaterThan(threshTrades1s) &&
-		stats1s.priceChangePcnt.GreaterThan(threshPrice1s) {
-
+	if stats.priceChangePcnt.GreaterThanOrEqual(threshPrice) {
 		b.logger.Warn().
 			Str("pair", symbol).
-			Str("type", "FLASH_PUMP_1S").
-			Str("price_change", stats1s.priceChangePcnt.StringFixed(2)+"%").
-			Str("volume", stats1s.totalVolumeUSDT.StringFixed(0)).
-			Str("thresh_vol", threshVol1s.StringFixed(0)).
-			Int64("trades", stats1s.tradeCount).
-			Msg("🚀 PUMP DETECTED")
-		return // Если сработала 1с, 3с уже не проверяем
-	}
-
-	// 2: 3 секундный памп
-	// Движения мощнее, но более растянутые во времени
-	stats3s := win.GetStatistics(3)
-
-	// Порог объема: max(AbsMin3s, Среднее_за_1с * 3 секунды * K)
-	threshVol3s := decimal.Max(
-		decimal.NewFromInt(MinVolume3s),
-		avgVolPerSec.Mul(decimal.NewFromInt(3)).Mul(k),
-	)
-
-	// Адаптивный порог сделок: max(AbsMin3s, Среднее_за_1с * 3 секунды * K)
-	threshTrades3s := decimal.Max(
-		decimal.NewFromInt(MinTrades3s),
-		avgTradesPerSec.Mul(decimal.NewFromInt(3)).Mul(k),
-	)
-
-	// Порог цены: фиксированный (например, 1.0%)
-	threshPrice3s := decimal.NewFromFloat(PriceDelta3s)
-
-	if stats3s.totalVolumeUSDT.GreaterThan(threshVol3s) &&
-		decimal.NewFromInt(stats3s.tradeCount).GreaterThan(threshTrades3s) &&
-		stats3s.priceChangePcnt.GreaterThan(threshPrice3s) {
-
-		b.logger.Warn().
-			Str("pair", symbol).
-			Str("type", "MOMENTUM_PUMP_3S").
-			Str("price_change", stats3s.priceChangePcnt.StringFixed(2)+"%").
-			Str("volume", stats3s.totalVolumeUSDT.StringFixed(0)).
-			Str("thresh_vol", threshVol3s.StringFixed(0)).
-			Int64("trades", stats3s.tradeCount).
-			Msg("🚀 PUMP DETECTED")
+			Str("period", "15m").
+			Str("price_change", stats.priceChangePcnt.StringFixed(2)+"%").
+			Str("volume_15m", stats.totalVolumeUSDT.StringFixed(0)).
+			Int64("trades_15m", stats.tradeCount).
+			Msg("🔥 STRONG PUMP DETECTED")
 	}
 }
