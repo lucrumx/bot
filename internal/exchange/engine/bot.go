@@ -14,6 +14,8 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/shopspring/decimal"
 
+	"github.com/lucrumx/bot/internal/notifier"
+
 	"github.com/lucrumx/bot/internal/utils"
 
 	"github.com/lucrumx/bot/internal/exchange"
@@ -35,11 +37,12 @@ type Bot struct {
 
 	startTime time.Time
 
-	logger zerolog.Logger
+	logger   zerolog.Logger
+	notifier notifier.Notifier
 }
 
 // NewBot creates a new Bot (constructor).
-func NewBot(provider exchange.Provider) *Bot {
+func NewBot(provider exchange.Provider, notif notifier.Notifier) *Bot {
 	rawTurnover := strings.ReplaceAll(utils.GetEnv("FILTER_TICKERS_TURNOVER", ""), "_", "")
 	filterTickersByTurnover, err := decimal.NewFromString(rawTurnover)
 	if err != nil {
@@ -83,7 +86,8 @@ func NewBot(provider exchange.Provider) *Bot {
 		checkInterval:           time.Duration(checkIntervalRaw) * time.Second,
 		alertStep:               alertStep,
 
-		logger: log.Output(zerolog.ConsoleWriter{Out: os.Stderr}),
+		logger:   log.Output(zerolog.ConsoleWriter{Out: os.Stderr}),
+		notifier: notif,
 	}
 }
 
@@ -209,11 +213,24 @@ func (b *Bot) checkPump(symbol string, win *Window) {
 	if needAlert {
 		win.UpdateAlertState(change)
 
+		priceChangePct := change.StringFixed(2) + "%"
+
 		b.logger.Warn().
 			Str("pair", symbol).
-			Str("change", change.StringFixed(2)+"%").
+			Str("change", priceChangePct).
 			Msg("🔥 PUMP DETECTED")
 
-		// Отправка в Telegram...
+		msg := fmt.Sprintf(
+			"<b>🚀 PUMP DETECTED: <a href=\"https://www.bybit.com/trade/usdt/%s\">%s</a></b>\n"+
+				"Price Change: <b>+%s%%</b>",
+			symbol,
+			symbol,
+			priceChangePct,
+		)
+
+		err := b.notifier.Send(msg)
+		if err != nil {
+			b.logger.Error().Err(err).Msg("failed to send telegram notification")
+		}
 	}
 }
