@@ -165,7 +165,10 @@ func (c *wsClient) LogMetric(ctx context.Context) {
 	for {
 		select {
 		case <-ticker.C:
-			log.Printf("metrics: dropped trades=%d", c.Metrics.DroppedTrades.Load())
+			droppedTradesCnt := c.Metrics.DroppedTrades.Load()
+			if int(droppedTradesCnt) > 0 {
+				log.Printf("metrics: dropped trades=%d", droppedTradesCnt)
+			}
 		case <-ctx.Done():
 			return
 		}

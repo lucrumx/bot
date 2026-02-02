@@ -30,6 +30,8 @@ type Bot struct {
 	pumpInterval            int
 	targetPriceChange       float64
 	startupDelay            time.Duration
+	checkInterval           time.Duration
+	alertStep               decimal.Decimal
 
 	startTime time.Time
 
@@ -59,6 +61,16 @@ func NewBot(provider exchange.Provider) *Bot {
 		log.Fatal().Err(err).Msg("failed to parse STARTUP_DELAY evn")
 	}
 
+	checkIntervalRaw, err := strconv.Atoi(utils.GetEnv("CHECK_INTERVAL", ""))
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to parse CHECK_INTERVAL evn")
+	}
+
+	alertStep, err := decimal.NewFromString(utils.GetEnv("ALERT_STEP", ""))
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to parse ALERT_STEP evn")
+	}
+
 	return &Bot{
 		provider: provider,
 		mutex:    sync.Mutex{},
@@ -68,6 +80,8 @@ func NewBot(provider exchange.Provider) *Bot {
 		pumpInterval:            pumpInterval,
 		targetPriceChange:       targetPriceChange,
 		startupDelay:            time.Duration(startupDelay) * time.Second,
+		checkInterval:           time.Duration(checkIntervalRaw) * time.Second,
+		alertStep:               alertStep,
 
 		logger: log.Output(zerolog.ConsoleWriter{Out: os.Stderr}),
 	}
@@ -87,11 +101,9 @@ func (b *Bot) StartBot(ctx context.Context) (<-chan exchange.Trade, error) {
 	if cntTickers == 0 {
 		return nil, fmt.Errorf("bot engine: no tickers found")
 	}
+	b.logger.Info().Msgf("bot engine: got %d tickers", cntTickers)
 
 	filteredTickers := b.filterTickers(*tickers)
-
-	b.logger.Info().Msg("bot engine: filtered tickers")
-	b.logger.Info().Msg(strings.Join(filteredTickers, ","))
 
 	sourceChan, err := b.provider.SubscribeTrades(ctx, filteredTickers)
 	if err != nil {
@@ -128,8 +140,6 @@ func (b *Bot) StartBot(ctx context.Context) (<-chan exchange.Trade, error) {
 }
 
 func (b *Bot) filterTickers(tickers []exchange.Ticker) []string {
-	b.logger.Info().Msgf("bot engine: got %d tickers", len(tickers))
-
 	filteredTickers := make([]string, 0, len(tickers))
 	for _, ticker := range tickers {
 		if !strings.HasSuffix(ticker.Symbol, "USDT") {
@@ -165,17 +175,45 @@ func (b *Bot) checkPump(symbol string, win *Window) {
 		return
 	}
 
-	stats := win.GetStatistics(b.pumpInterval)
+	// Throttling
+	if !win.CanCheck(b.checkInterval) {
+		return
+	}
 
-	threshPrice := decimal.NewFromFloat(b.targetPriceChange)
+	change, isGrow := win.CheckGrow(b.pumpInterval, b.targetPriceChange)
+	if !isGrow {
+		return
+	}
 
-	if stats.priceChangePcnt.GreaterThanOrEqual(threshPrice) {
+	lastAlertTime, lastAlertLevel := win.GetAlertState()
+
+	// Новый это памп или продолжение старого
+	// Если с прошлого алерта прошло времени больше, чем длина окна,
+	// значит старый памп закончился, и мы поймали новый.
+	isNewPump := time.Since(lastAlertTime) > time.Duration(b.pumpInterval)*time.Second
+
+	needAlert := false
+
+	if isNewPump {
+		needAlert = true
+	} else {
+		// Памп продолжается. Проверяем, выросли ли мы на "шаг" (например, +5%)
+		// Текущий рост >= Прошлый уровень + Шаг
+		// Пример: 22% >= 15% + 5% -> True
+		nextThreshold := lastAlertLevel.Add(b.alertStep)
+		if change.GreaterThanOrEqual(nextThreshold) {
+			needAlert = true
+		}
+	}
+
+	if needAlert {
+		win.UpdateAlertState(change)
+
 		b.logger.Warn().
 			Str("pair", symbol).
-			Str("period", "15m").
-			Str("price_change", stats.priceChangePcnt.StringFixed(2)+"%").
-			Str("volume_15m", stats.totalVolumeUSDT.StringFixed(0)).
-			Int64("trades_15m", stats.tradeCount).
-			Msg("🔥 STRONG PUMP DETECTED")
+			Str("change", change.StringFixed(2)+"%").
+			Msg("🔥 PUMP DETECTED")
+
+		// Отправка в Telegram...
 	}
 }
