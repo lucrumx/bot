@@ -4,10 +4,12 @@ package engine
 import (
 	"context"
 	"fmt"
+	"math"
 	"os"
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/rs/zerolog"
@@ -39,6 +41,9 @@ type Bot struct {
 
 	logger   zerolog.Logger
 	notifier notifier.Notifier
+
+	rpsTimerIntervalInSec int
+	tradeCounter          uint64
 }
 
 // NewBot creates a new Bot (constructor).
@@ -74,6 +79,11 @@ func NewBot(provider exchange.Provider, notif notifier.Notifier) *Bot {
 		log.Fatal().Err(err).Msg("failed to parse ALERT_STEP evn")
 	}
 
+	rpsTimerIntervalInSec, err := strconv.Atoi(utils.GetEnv("RPS_TIMER_INTERVAL", "60"))
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to parse RPS_TIMER_INTERVAL evn")
+	}
+
 	return &Bot{
 		provider: provider,
 		mutex:    sync.Mutex{},
@@ -86,6 +96,8 @@ func NewBot(provider exchange.Provider, notif notifier.Notifier) *Bot {
 		checkInterval:           time.Duration(checkIntervalRaw) * time.Second,
 		alertStep:               alertStep,
 
+		rpsTimerIntervalInSec: rpsTimerIntervalInSec,
+
 		logger:   log.Output(zerolog.ConsoleWriter{Out: os.Stderr}),
 		notifier: notif,
 	}
@@ -94,9 +106,8 @@ func NewBot(provider exchange.Provider, notif notifier.Notifier) *Bot {
 // StartBot starts the bot engine and returns a channel of trades.
 func (b *Bot) StartBot(ctx context.Context) (<-chan exchange.Trade, error) {
 	b.startTime = time.Now()
-	b.logger.Info().Msg("bot engine: starting bot")
+	b.logger.Info().Msg("bot engine: starting bot and getting tickers")
 
-	log.Print("bot engine: getting tickers")
 	tickers, err := b.provider.GetTickers(ctx, nil, exchange.CategoryLinear)
 	if err != nil {
 		return nil, fmt.Errorf("bot engine: failed to get tickers")
@@ -118,6 +129,8 @@ func (b *Bot) StartBot(ctx context.Context) (<-chan exchange.Trade, error) {
 
 	outChan := make(chan exchange.Trade, 10000)
 
+	go b.tradeCount(ctx)
+
 	go func() {
 		defer close(outChan)
 		for {
@@ -129,12 +142,13 @@ func (b *Bot) StartBot(ctx context.Context) (<-chan exchange.Trade, error) {
 					return
 				}
 				b.processTrade(trade)
+				atomic.AddUint64(&b.tradeCounter, 1)
 
 				// Пробрасываем дальше
 				select {
 				case outChan <- trade:
 				default:
-					// если обработка outChan тормозит- данные пропадут
+					b.logger.Warn().Msgf("bot engine: dropped trade for %s due to slow processing", trade.Symbol)
 				}
 			}
 		}
@@ -193,7 +207,7 @@ func (b *Bot) checkPump(symbol string, win *Window) {
 
 	// Новый это памп или продолжение старого
 	// Если с прошлого алерта прошло времени больше, чем длина окна,
-	// значит старый памп закончился, и мы поймали новый.
+	// значит старый памп закончился, поймали новый.
 	isNewPump := time.Since(lastAlertTime) > time.Duration(b.pumpInterval)*time.Second
 
 	needAlert := false
@@ -233,4 +247,33 @@ func (b *Bot) checkPump(symbol string, win *Window) {
 			b.logger.Error().Err(err).Msg("failed to send telegram notification")
 		}
 	}
+}
+
+func (b *Bot) tradeCount(ctx context.Context) {
+	ticker := time.NewTicker(time.Second * time.Duration(b.rpsTimerIntervalInSec))
+	defer ticker.Stop()
+
+	lastCount := uint64(0)
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			current := atomic.LoadUint64(&b.tradeCounter)
+			diff := current - lastCount
+			rps := float64(diff) / float64(b.rpsTimerIntervalInSec)
+
+			if diff > 0 {
+				b.logger.Info().
+					Uint64("total", current).
+					Uint64("delta", diff).
+					Float64("rps", math.Round(rps)).
+					Msg("Engine throughput")
+			}
+
+			lastCount = current
+		}
+	}
+
 }
