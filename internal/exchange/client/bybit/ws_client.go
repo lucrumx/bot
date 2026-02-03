@@ -149,7 +149,6 @@ func (c *wsClient) readMessages(ctx context.Context, wsConn *websocket.Conn, out
 				select {
 				case outChan <- trade:
 				default:
-					log.Printf("chain is full, dropped trade: %v", trade)
 					c.Metrics.DroppedTrades.Add(1)
 				}
 			}

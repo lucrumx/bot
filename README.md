@@ -14,6 +14,7 @@ A high-performance real-time market anomaly detector for **Bybit Linear Futures*
 - **Continuous Sliding Window**: Custom ring-buffer implementation with **Gap Filling** mechanism (automatically populates missing data points during low liquidity), ensuring seamless analysis.
 - **Multi-channel Notifier**: Telegram integration for instant alerts with HTML formatting support.
 - **O(1) Performance**: Detection logic is optimized for constant time complexity, allowing monitoring of hundreds of tickers with minimal CPU overhead.
+- **Parallel Trade Processing**: Worker pool with deterministic symbol hashing; per-worker windows replace a global mutex and improve throughput under load.
 - **WebSocket Orchestration**: Efficient data stream management with automatic reconnection and chunked subscription handling.
 
 ## 🛠 Tech Stack
@@ -27,7 +28,8 @@ A high-performance real-time market anomaly detector for **Bybit Linear Futures*
 
 ## 📈 Performance (Observed)
 
-On MacBook Pro M2 Pro, the engine processes ~800 trades/sec (processed) with a 60s reporting window, Bybit Linear Futures, measured over ~24h.
+Real‑time processing of hundreds of trades per second with low latency.  
+On MacBook Pro M2 Pro, the engine processes ~1400 trades/sec (processed) with a 60s reporting window, Bybit Linear Futures, measured over ~24h. Processing is parallelized via a hash‑partitioned worker pool.
 
 ## 🏗 Project Structure
 

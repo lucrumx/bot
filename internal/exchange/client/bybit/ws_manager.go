@@ -26,7 +26,7 @@ func NewWSManager() *WSManager {
 
 // SubscribeTrades initiates WebSocket trade subscriptions for the given symbols and streams trades to the returned channel.
 func (m *WSManager) SubscribeTrades(ctx context.Context, symbols []string) (<-chan exchange.Trade, error) {
-	bufferSize, err := strconv.Atoi(utils.GetEnv("WS_CLIENT_BUFFER_SIZE", "1000"))
+	bufferSize, err := strconv.Atoi(utils.GetEnv("WS_CLIENT_BUFFER_SIZE", "5000"))
 	if err != nil {
 		log.Fatalf("Cannot get env WS_CLIENT_BUFFER_SIZE: %v", err)
 	}
