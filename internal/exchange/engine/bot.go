@@ -4,13 +4,15 @@ package engine
 import (
 	"context"
 	"fmt"
+	"hash/fnv"
 	"math"
 	"os"
+	"runtime"
 	"strconv"
 	"strings"
-	"sync"
 	"sync/atomic"
 	"time"
+	"unsafe"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -27,8 +29,7 @@ import (
 type Bot struct {
 	provider exchange.Provider
 
-	mutex   sync.Mutex
-	windows map[string]*Window
+	workers []*worker
 
 	filterTickersByTurnover decimal.Decimal
 	pumpInterval            int
@@ -86,8 +87,6 @@ func NewBot(provider exchange.Provider, notif notifier.Notifier) *Bot {
 
 	return &Bot{
 		provider: provider,
-		mutex:    sync.Mutex{},
-		windows:  map[string]*Window{},
 
 		filterTickersByTurnover: filterTickersByTurnover,
 		pumpInterval:            pumpInterval,
@@ -127,28 +126,62 @@ func (b *Bot) StartBot(ctx context.Context) (<-chan exchange.Trade, error) {
 
 	b.logger.Info().Msgf("bot engine: starting trade processor and collection statistics for %d seconds", b.pumpInterval)
 
-	outChan := make(chan exchange.Trade, 10000)
+	outChan := make(chan exchange.Trade, 200_000)
+
+	numWorkers := runtime.NumCPU()
+	b.workers = make([]*worker, numWorkers)
+
+	workerCtx, cancelWorkers := context.WithCancel(ctx)
+
+	for i := 0; i < numWorkers; i++ {
+		b.workers[i] = &worker{
+			id:      i,
+			bot:     b,
+			inChan:  make(chan exchange.Trade, 50_000),
+			windows: make(map[string]*Window),
+		}
+		go b.workers[i].workerStart(workerCtx)
+	}
+
+	b.logger.Info().Msgf("bot engine: started %d workers", numWorkers)
 
 	go b.tradeCount(ctx)
 
 	go func() {
 		defer close(outChan)
+
+		hasher := fnv.New32a()
+
 		for {
 			select {
 			case <-ctx.Done():
+				cancelWorkers()
 				return
 			case trade, ok := <-sourceChan:
 				if !ok {
+					cancelWorkers()
 					return
 				}
-				b.processTrade(trade)
-				atomic.AddUint64(&b.tradeCounter, 1)
 
-				// Пробрасываем дальше
+				hasher.Reset()
+				// hasher.Write([]byte(trade.Symbol))
+				// unsafe только для быстрого хеша: срез не сохраняется, строка живёт до конца итерации.
+				// так, быстрее, не требует алокаций памяти, но допустимо только потому,
+				// что строка (Symbol) не будет меняться иначе первый вариант
+				_, _ = hasher.Write(unsafeStringToBytes(trade.Symbol))
+				hash := hasher.Sum32()
+
+				workerIdx := hash % uint32(numWorkers)
+				select {
+				case b.workers[workerIdx].inChan <- trade:
+					//
+				default:
+					b.logger.Warn().Str("s", trade.Symbol).Msg("worker dropped trade")
+				}
+
 				select {
 				case outChan <- trade:
 				default:
-					b.logger.Warn().Msgf("bot engine: dropped trade for %s due to slow processing", trade.Symbol)
 				}
 			}
 		}
@@ -173,80 +206,6 @@ func (b *Bot) filterTickers(tickers []exchange.Ticker) []string {
 
 	b.logger.Info().Msgf("bot engine: %d tickers left after filtering", len(filteredTickers))
 	return filteredTickers
-}
-
-func (b *Bot) processTrade(trade exchange.Trade) {
-	b.mutex.Lock()
-	window, ok := b.windows[trade.Symbol]
-	if !ok {
-		window = NewWindow(b.pumpInterval)
-		b.windows[trade.Symbol] = window
-	}
-	b.mutex.Unlock()
-
-	window.AddTrade(trade)
-	b.checkPump(trade.Symbol, window)
-}
-
-func (b *Bot) checkPump(symbol string, win *Window) {
-	if time.Since(b.startTime) < b.startupDelay {
-		return
-	}
-
-	// Throttling
-	if !win.CanCheck(b.checkInterval) {
-		return
-	}
-
-	change, isGrow := win.CheckGrow(b.pumpInterval, b.targetPriceChange)
-	if !isGrow {
-		return
-	}
-
-	lastAlertTime, lastAlertLevel := win.GetAlertState()
-
-	// Новый это памп или продолжение старого
-	// Если с прошлого алерта прошло времени больше, чем длина окна,
-	// значит старый памп закончился, поймали новый.
-	isNewPump := time.Since(lastAlertTime) > time.Duration(b.pumpInterval)*time.Second
-
-	needAlert := false
-
-	if isNewPump {
-		needAlert = true
-	} else {
-		// Памп продолжается. Проверяем, выросли ли мы на "шаг" (например, +5%)
-		// Текущий рост >= Прошлый уровень + Шаг
-		// Пример: 22% >= 15% + 5% -> True
-		nextThreshold := lastAlertLevel.Add(b.alertStep)
-		if change.GreaterThanOrEqual(nextThreshold) {
-			needAlert = true
-		}
-	}
-
-	if needAlert {
-		win.UpdateAlertState(change)
-
-		priceChangePct := change.StringFixed(2) + "%"
-
-		b.logger.Warn().
-			Str("pair", symbol).
-			Str("change", priceChangePct).
-			Msg("🔥 PUMP DETECTED")
-
-		msg := fmt.Sprintf(
-			"<b>🚀 PUMP DETECTED: <a href=\"https://www.bybit.com/trade/usdt/%s\">%s</a></b>\n"+
-				"Price Change: <b>+%s%%</b>",
-			symbol,
-			symbol,
-			priceChangePct,
-		)
-
-		err := b.notifier.Send(msg)
-		if err != nil {
-			b.logger.Error().Err(err).Msg("failed to send telegram notification")
-		}
-	}
 }
 
 func (b *Bot) tradeCount(ctx context.Context) {
@@ -275,5 +234,8 @@ func (b *Bot) tradeCount(ctx context.Context) {
 			lastCount = current
 		}
 	}
+}
 
+func unsafeStringToBytes(s string) []byte {
+	return unsafe.Slice(unsafe.StringData(s), len(s))
 }
