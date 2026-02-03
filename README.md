@@ -7,7 +7,7 @@ A high-performance real-time market anomaly detector for **Bybit Linear Futures*
 
 ## 🚀 Core Features
 
-- **Momentum Detection (15m)**: Tracks significant price impulses over configurable intervals (e.g., 15% growth over 15 minutes).
+- **Momentum Detection (30m)**: Tracks significant price impulses over configurable intervals (e.g., 15% growth over 15 minutes).
 - **Intelligent Alerting System**: 
   - **Alert Step**: Sends follow-up notifications if the price continues to rise (e.g., every +5% after the initial signal).
   - **Cooldown**: Prevents spam and redundant signals for the same price movement.
@@ -24,6 +24,10 @@ A high-performance real-time market anomaly detector for **Bybit Linear Futures*
 - **Math**: `shopspring/decimal` for fixed-point financial precision.
 - **Logging**: `zerolog` (structured JSON logging).
 - **Storage**: PostgreSQL + GORM (for Management API).
+
+## 📈 Performance (Observed)
+
+On MacBook Pro M2 Pro, the engine processes ~800 trades/sec (processed) with a 60s reporting window, Bybit Linear Futures, measured over ~24h.
 
 ## 🏗 Project Structure
 
