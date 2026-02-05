@@ -110,13 +110,16 @@ func (b *Bot) StartBot(ctx context.Context) (<-chan exchange.Trade, error) {
 	if err != nil {
 		return nil, fmt.Errorf("bot engine: failed to get tickers")
 	}
-	cntTickers := len(*tickers)
+	if tickers == nil {
+		return nil, fmt.Errorf("tickers not found")
+	}
+	cntTickers := len(tickers)
 	if cntTickers == 0 {
 		return nil, fmt.Errorf("bot engine: no tickers found")
 	}
 	b.logger.Info().Msgf("bot engine: got %d tickers", cntTickers)
 
-	filteredTickers := b.filterTickers(*tickers)
+	filteredTickers := b.filterTickers(tickers)
 
 	sourceChan, err := b.provider.SubscribeTrades(ctx, filteredTickers)
 	if err != nil {
