@@ -27,7 +27,7 @@ type response[T any] struct {
 }
 
 // GetTickers retrieves tickers from ByBit API.
-func (c *Client) GetTickers(ctx context.Context, symbols []string, category exchange.Category) (*[]exchange.Ticker, error) {
+func (c *Client) GetTickers(ctx context.Context, symbols []string, category exchange.Category) ([]exchange.Ticker, error) {
 	req, err := http.NewRequestWithContext(
 		ctx,
 		http.MethodGet,
@@ -78,5 +78,5 @@ func (c *Client) GetTickers(ctx context.Context, symbols []string, category exch
 		result = append(result, t)
 	}
 
-	return &result, nil
+	return result, nil
 }

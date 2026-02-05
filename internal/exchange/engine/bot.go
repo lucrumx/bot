@@ -12,7 +12,6 @@ import (
 	"strings"
 	"sync/atomic"
 	"time"
-	"unsafe"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -111,13 +110,16 @@ func (b *Bot) StartBot(ctx context.Context) (<-chan exchange.Trade, error) {
 	if err != nil {
 		return nil, fmt.Errorf("bot engine: failed to get tickers")
 	}
-	cntTickers := len(*tickers)
+	if tickers == nil {
+		return nil, fmt.Errorf("tickers not found")
+	}
+	cntTickers := len(tickers)
 	if cntTickers == 0 {
 		return nil, fmt.Errorf("bot engine: no tickers found")
 	}
 	b.logger.Info().Msgf("bot engine: got %d tickers", cntTickers)
 
-	filteredTickers := b.filterTickers(*tickers)
+	filteredTickers := b.filterTickers(tickers)
 
 	sourceChan, err := b.provider.SubscribeTrades(ctx, filteredTickers)
 	if err != nil {
@@ -164,11 +166,7 @@ func (b *Bot) StartBot(ctx context.Context) (<-chan exchange.Trade, error) {
 				}
 
 				hasher.Reset()
-				// hasher.Write([]byte(trade.Symbol))
-				// unsafe только для быстрого хеша: срез не сохраняется, строка живёт до конца итерации.
-				// так, быстрее, не требует алокаций памяти, но допустимо только потому,
-				// что строка (Symbol) не будет меняться иначе первый вариант
-				_, _ = hasher.Write(unsafeStringToBytes(trade.Symbol))
+				_, _ = hasher.Write([]byte(trade.Symbol))
 				hash := hasher.Sum32()
 
 				workerIdx := hash % uint32(numWorkers)
@@ -234,8 +232,4 @@ func (b *Bot) tradeCount(ctx context.Context) {
 			lastCount = current
 		}
 	}
-}
-
-func unsafeStringToBytes(s string) []byte {
-	return unsafe.Slice(unsafe.StringData(s), len(s))
 }

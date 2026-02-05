@@ -27,7 +27,7 @@ func TestClient_GetTickers_Integration(t *testing.T) {
 	require.NotNil(t, tickers)
 	require.NotEmpty(t, tickers)
 
-	firstTicker := (*tickers)[0]
+	firstTicker := (tickers)[0]
 
 	log.Printf("First ticker symbol: %s, price: %s", firstTicker.Symbol, firstTicker.LastPrice)
 }
