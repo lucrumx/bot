@@ -1,7 +1,6 @@
 package engine
 
 import (
-	"sync"
 	"time"
 
 	"github.com/shopspring/decimal"
@@ -11,7 +10,6 @@ import (
 
 // Window tracks price data over a fixed time window, enabling analysis of trends and alerts for significant changes.
 type Window struct {
-	mu         sync.Mutex
 	prices     []decimal.Decimal
 	timestamps []int64
 	windowSize int64
@@ -57,9 +55,6 @@ func (w *Window) fillGaps(targetTs int64) {
 
 // AddTrade integrates a new trade into the window, updating prices, timestamps, and filling any gaps in the time series.
 func (w *Window) AddTrade(trade exchange.Trade) {
-	w.mu.Lock()
-	defer w.mu.Unlock()
-
 	ts := trade.Ts / 1000
 
 	// первый трейд — инициализация
@@ -84,10 +79,7 @@ func (w *Window) AddTrade(trade exchange.Trade) {
 
 // CheckGrow evaluates if the price increase over a given interval exceeds a target percentage.
 // It returns the percentage change and a boolean indicating whether the growth condition is met or not.
-func (w *Window) CheckGrow(interval int, targetPercent float64) (decimal.Decimal, bool) {
-	w.mu.Lock()
-	defer w.mu.Unlock()
-
+func (w *Window) CheckGrow(interval int, targetPercent decimal.Decimal) (decimal.Decimal, bool) {
 	if int64(interval) >= w.windowSize || w.lastTs == 0 {
 		return decimal.Zero, false
 	}
@@ -131,7 +123,7 @@ func (w *Window) CheckGrow(interval int, targetPercent float64) (decimal.Decimal
 		Div(pastPrice).
 		Mul(decimal.NewFromInt(100))
 
-	if change.GreaterThanOrEqual(decimal.NewFromFloat(targetPercent)) {
+	if change.GreaterThanOrEqual(targetPercent) {
 		return change, true
 	}
 	return decimal.Zero, false
@@ -139,9 +131,6 @@ func (w *Window) CheckGrow(interval int, targetPercent float64) (decimal.Decimal
 
 // CanCheck determines if the specified minimum interval has elapsed since the last check and updates the last check time.
 func (w *Window) CanCheck(minInterval time.Duration) bool {
-	w.mu.Lock()
-	defer w.mu.Unlock()
-
 	if time.Since(w.lastCheck) >= minInterval {
 		w.lastCheck = time.Now()
 		return true
@@ -151,16 +140,11 @@ func (w *Window) CanCheck(minInterval time.Duration) bool {
 
 // GetAlertState returns the last alert time and level, providing the state of the most recent alert.
 func (w *Window) GetAlertState() (time.Time, decimal.Decimal) {
-	w.mu.Lock()
-	defer w.mu.Unlock()
 	return w.lastAlertTime, w.lastAlertLevel
 }
 
 // UpdateAlertState updates the last alert time and level with the specified level.
 func (w *Window) UpdateAlertState(level decimal.Decimal) {
-	w.mu.Lock()
-	defer w.mu.Unlock()
-
 	w.lastAlertTime = time.Now()
 	w.lastAlertLevel = level
 }

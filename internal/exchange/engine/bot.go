@@ -32,7 +32,7 @@ type Bot struct {
 
 	filterTickersByTurnover decimal.Decimal
 	pumpInterval            int
-	targetPriceChange       float64
+	targetPriceChange       decimal.Decimal
 	startupDelay            time.Duration
 	checkInterval           time.Duration
 	alertStep               decimal.Decimal
@@ -59,7 +59,7 @@ func NewBot(provider exchange.Provider, notif notifier.Notifier) *Bot {
 		log.Fatal().Err(err).Msg("failed to parse PUMP_INTERVAL evn")
 	}
 
-	targetPriceChange, err := strconv.ParseFloat(utils.GetEnv("TARGET_PRICE_CHANGE", ""), 64)
+	targetPriceChange, err := decimal.NewFromString(utils.GetEnv("TARGET_PRICE_CHANGE", ""))
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to parse TARGET_PRICE_CHANGE evn")
 	}
