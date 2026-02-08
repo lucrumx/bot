@@ -70,12 +70,12 @@ func TestWindow_CheckGrow(t *testing.T) {
 	})
 
 	// если росто больше порога
-	change, isGrow := w.CheckGrow(900, 15.0)
+	change, isGrow := w.CheckGrow(900, decimal.NewFromInt(15.0))
 	assert.True(t, isGrow)
 	assert.Equal(t, "20.00", change.StringFixed(2))
 
 	// если рост меньше порога
-	_, isGrow = w.CheckGrow(900, 25.0)
+	_, isGrow = w.CheckGrow(900, decimal.NewFromInt(25.0))
 	assert.False(t, isGrow)
 }
 
