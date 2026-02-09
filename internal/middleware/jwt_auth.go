@@ -27,6 +27,12 @@ func JwtAuth(cfg *config.Config) gin.HandlerFunc {
 			tokenString = tokenString[7:]
 		}
 
+		if len(tokenString) == 0 {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Empty Authorization token"})
+			c.Abort()
+			return
+		}
+
 		claims, err := authSrv.ValidateJWT(tokenString)
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token or expired"})

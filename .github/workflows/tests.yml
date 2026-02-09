@@ -48,6 +48,6 @@ jobs:
           DB_PASSWORD: password
           DB_NAME: lucrum_bot_test
           DB_PORT: 5433
-          DB_SSLMODE: disable
+          DB_SSL_MODE: disable
           JWT_SECRET: test-secret-key
         run: go test -v ./...
