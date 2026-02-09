@@ -146,7 +146,12 @@ func loadFromEnv(cfg *Config) error {
 		Bot: botConfig,
 	}
 
-	cfg.Notifications = NotificationsConfig{}
+	cfg.Notifications = NotificationsConfig{
+		Telegram: TelegramConfig{
+			BotToken: utils.GetEnv("TELEGRAM_BOT_TOKEN", ""),
+			ChatID:   utils.GetEnv("TELEGRAM_CHAT_ID", ""),
+		},
+	}
 
 	return nil
 }

@@ -52,7 +52,7 @@ func (t *TelegramNotifier) Send(message string) error {
 		return err
 	}
 	defer func() {
-		if closeErr := resp.Body.Close(); err != nil {
+		if closeErr := resp.Body.Close(); closeErr != nil {
 			fmt.Printf("failed to close response body: %v\n", closeErr)
 		}
 	}()

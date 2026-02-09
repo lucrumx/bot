@@ -40,6 +40,7 @@ func (h *AuthHandler) Auth(c *gin.Context) {
 	token, err := h.services.Login(data.Email, data.Password)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
 	}
 
 	c.JSON(http.StatusCreated, ToLoginResponse(token))
