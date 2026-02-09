@@ -4,13 +4,25 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/lucrumx/bot/internal/config"
 )
 
 // TestValidateJWT tests the generation and validation of a JWT, ensuring valid claims and no errors during the process.
 func TestValidateJWT(t *testing.T) {
-	t.Setenv("JWT_SECRET", "some-secret-key")
+	cfg := &config.Config{
+		HTTP: config.HTTPConfig{
+			Auth: config.AuthConfig{
+				JwtSecret:    "some-secret-key",
+				JwtExpiresIn: 24,
+			},
+		},
+	}
+
+	authSrv := Create(nil, cfg)
+
 	userID := uint(123)
-	validToken, _ := GenerateJWT(userID)
+	validToken, _ := authSrv.GenerateJWT(userID)
 
 	tests := []struct {
 		name        string
@@ -38,7 +50,7 @@ func TestValidateJWT(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			claims, err := ValidateJWT(tt.tokenString)
+			claims, err := authSrv.ValidateJWT(tt.tokenString)
 
 			if tt.wantErr {
 				assert.Error(t, err)

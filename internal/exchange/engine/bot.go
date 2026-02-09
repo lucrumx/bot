@@ -8,7 +8,6 @@ import (
 	"math"
 	"os"
 	"runtime"
-	"strconv"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -17,9 +16,9 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/shopspring/decimal"
 
-	"github.com/lucrumx/bot/internal/notifier"
+	"github.com/lucrumx/bot/internal/config"
 
-	"github.com/lucrumx/bot/internal/utils"
+	"github.com/lucrumx/bot/internal/notifier"
 
 	"github.com/lucrumx/bot/internal/exchange"
 )
@@ -47,54 +46,18 @@ type Bot struct {
 }
 
 // NewBot creates a new Bot (constructor).
-func NewBot(provider exchange.Provider, notif notifier.Notifier) *Bot {
-	rawTurnover := strings.ReplaceAll(utils.GetEnv("FILTER_TICKERS_TURNOVER", ""), "_", "")
-	filterTickersByTurnover, err := decimal.NewFromString(rawTurnover)
-	if err != nil {
-		log.Fatal().Err(err).Msg("failed to parse FILTER_TICKERS_TURNOVER evn")
-	}
-
-	pumpInterval, err := strconv.Atoi(utils.GetEnv("PUMP_INTERVAL", ""))
-	if err != nil {
-		log.Fatal().Err(err).Msg("failed to parse PUMP_INTERVAL evn")
-	}
-
-	targetPriceChange, err := decimal.NewFromString(utils.GetEnv("TARGET_PRICE_CHANGE", ""))
-	if err != nil {
-		log.Fatal().Err(err).Msg("failed to parse TARGET_PRICE_CHANGE evn")
-	}
-
-	startupDelay, err := strconv.ParseFloat(utils.GetEnv("STARTUP_DELAY", ""), 64)
-	if err != nil {
-		log.Fatal().Err(err).Msg("failed to parse STARTUP_DELAY evn")
-	}
-
-	checkIntervalRaw, err := strconv.Atoi(utils.GetEnv("CHECK_INTERVAL", ""))
-	if err != nil {
-		log.Fatal().Err(err).Msg("failed to parse CHECK_INTERVAL evn")
-	}
-
-	alertStep, err := decimal.NewFromString(utils.GetEnv("ALERT_STEP", ""))
-	if err != nil {
-		log.Fatal().Err(err).Msg("failed to parse ALERT_STEP evn")
-	}
-
-	rpsTimerIntervalInSec, err := strconv.Atoi(utils.GetEnv("RPS_TIMER_INTERVAL", "60"))
-	if err != nil {
-		log.Fatal().Err(err).Msg("failed to parse RPS_TIMER_INTERVAL evn")
-	}
-
+func NewBot(provider exchange.Provider, notif notifier.Notifier, cfg *config.Config) *Bot {
 	return &Bot{
 		provider: provider,
 
-		filterTickersByTurnover: filterTickersByTurnover,
-		pumpInterval:            pumpInterval,
-		targetPriceChange:       targetPriceChange,
-		startupDelay:            time.Duration(startupDelay) * time.Second,
-		checkInterval:           time.Duration(checkIntervalRaw) * time.Second,
-		alertStep:               alertStep,
+		filterTickersByTurnover: cfg.Exchange.Bot.FilterTickersTurnover,
+		pumpInterval:            cfg.Exchange.Bot.PumpInterval,
+		targetPriceChange:       cfg.Exchange.Bot.TargetPriceChange,
+		startupDelay:            cfg.Exchange.Bot.StartupDelay,
+		checkInterval:           cfg.Exchange.Bot.CheckInterval,
+		alertStep:               cfg.Exchange.Bot.AlertStep,
 
-		rpsTimerIntervalInSec: rpsTimerIntervalInSec,
+		rpsTimerIntervalInSec: cfg.Exchange.Bot.RpsTimerInterval,
 
 		logger:   log.Output(zerolog.ConsoleWriter{Out: os.Stderr}),
 		notifier: notif,

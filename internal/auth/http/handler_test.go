@@ -11,6 +11,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"gorm.io/gorm"
 
+	"github.com/lucrumx/bot/internal/config"
+
 	"github.com/lucrumx/bot/internal/auth/services"
 	"github.com/lucrumx/bot/internal/models"
 	usersService "github.com/lucrumx/bot/internal/users/services"
@@ -18,11 +20,17 @@ import (
 	"github.com/lucrumx/bot/internal/utils/testutils"
 )
 
-func setup(t *testing.T) (*gin.Engine, *gorm.DB) {
-	db := testutils.SetupTestDB(t)
+func setup() (*gin.Engine, *gorm.DB) {
+	db := testutils.SetupTestDB()
 	testutils.ClearTables(db, "users")
 
-	t.Setenv("JWT_SECRET", "some-secret-key")
+	cfg := config.Config{
+		HTTP: config.HTTPConfig{
+			Auth: config.AuthConfig{
+				JwtSecret: "some-secret-key",
+			},
+		},
+	}
 
 	gin.SetMode(gin.TestMode)
 
@@ -30,7 +38,7 @@ func setup(t *testing.T) (*gin.Engine, *gorm.DB) {
 
 	usersRepo := usersService.CreateUserRepo(db)
 	usersSrv := usersService.Create(usersRepo)
-	service := services.Create(usersSrv)
+	service := services.Create(usersSrv, &cfg)
 	handler := Create(service)
 
 	r.POST("/auth", handler.Auth)
@@ -64,7 +72,7 @@ func TestAuth_Integration(t *testing.T) {
 		{name: "invalid password (less then min len)", email: email, password: "000cv1", httpStatus: http.StatusBadRequest},
 	}
 
-	router, db := setup(t)
+	router, db := setup()
 
 	_, _ = createUser(email, password, db)
 

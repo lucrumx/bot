@@ -4,13 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"sync/atomic"
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/rs/zerolog/log"
 
-	"github.com/lucrumx/bot/internal/utils"
+	"github.com/lucrumx/bot/internal/config"
 
 	"github.com/lucrumx/bot/internal/exchange"
 )
@@ -30,10 +30,9 @@ type wsClient struct {
 	Metrics *Metrics
 }
 
-func newWsClient() *wsClient {
-	baseURL := utils.GetEnv("BYBIT_WS_BASE_URL", "")
+func newWsClient(cfg *config.Config) *wsClient {
 	return &wsClient{
-		url:     baseURL + linearPublicWsURL,
+		url:     cfg.Exchange.ByBit.WsBaseURL + linearPublicWsURL,
 		Metrics: &Metrics{},
 	}
 }
@@ -101,7 +100,7 @@ func (c *wsClient) pingPong(ctx context.Context, wsConn *websocket.Conn) {
 				"op": "ping",
 			}
 			if err := wsConn.WriteJSON(pinPongPayload); err != nil {
-				log.Printf("failed to send pin pong: %v", err)
+				log.Warn().Err(err).Msg("Failed to send ping pong to Bybit websocket")
 				return
 			}
 		}
@@ -111,8 +110,8 @@ func (c *wsClient) pingPong(ctx context.Context, wsConn *websocket.Conn) {
 func (c *wsClient) readMessages(ctx context.Context, wsConn *websocket.Conn, outChan chan<- exchange.Trade) {
 	defer func() {
 		err := wsConn.Close()
-		if err != nil && ctx.Err() == nil { // log only if context did not close the connection (context still alive)
-			log.Printf("failed to close websocket connection: %v", err)
+		if err != nil && ctx.Err() == nil { // log only if context did not close the connection (context still alive
+			log.Warn().Err(err).Msg("Failed to close websocket connection")
 		}
 	}()
 
@@ -129,13 +128,13 @@ func (c *wsClient) readMessages(ctx context.Context, wsConn *websocket.Conn, out
 			}
 
 			// TODO: тут по идее реконект
-			log.Printf("failed to read message: %v", err)
+			log.Warn().Err(err).Msg("Failed to read message from Bybit websocket")
 			return
 		}
 
 		var message wsTradeMessageDTO
 		if err := json.Unmarshal(messageByte, &message); err != nil {
-			log.Printf("failed to unmarshal message: %v", err)
+			log.Warn().Err(err).Msg("Failed to unmarshal message from Bybit websocket")
 			continue
 		}
 
@@ -143,7 +142,7 @@ func (c *wsClient) readMessages(ctx context.Context, wsConn *websocket.Conn, out
 			for _, t := range message.Data {
 				trade, err := mapWsTrade(t)
 				if err != nil {
-					log.Printf("failed to map trade: %v", err)
+					log.Warn().Err(err).Msg("Failed to map trade from Bybit websocket")
 				}
 
 				select {
@@ -166,7 +165,7 @@ func (c *wsClient) LogMetric(ctx context.Context) {
 		case <-ticker.C:
 			droppedTradesCnt := c.Metrics.DroppedTrades.Load()
 			if int(droppedTradesCnt) > 0 {
-				log.Printf("metrics: dropped trades=%d", droppedTradesCnt)
+				log.Warn().Msgf("metrics: dropped trades=%d", droppedTradesCnt)
 			}
 		case <-ctx.Done():
 			return

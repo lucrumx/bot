@@ -8,15 +8,23 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/lucrumx/bot/internal/config"
+
 	"github.com/lucrumx/bot/internal/exchange"
 )
 
 func TestClient_GetTickers_Integration(t *testing.T) {
 	t.Skip("Skipping integration test")
 
-	t.Setenv("BYBIT_BASE_URL", "https://api.bybit.nl")
+	cfg := &config.Config{
+		Exchange: config.ExchangeConfig{
+			ByBit: config.ByBitConfig{
+				BaseURL: "https://api.bybit.nl",
+			},
+		},
+	}
 
-	client := NewByBitClient()
+	client := NewByBitClient(cfg)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()

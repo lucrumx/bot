@@ -5,8 +5,8 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/lucrumx/bot/internal/config"
 	"github.com/lucrumx/bot/internal/exchange"
-	"github.com/lucrumx/bot/internal/utils"
 )
 
 // Client represents a ByBit client.
@@ -17,11 +17,11 @@ type Client struct {
 }
 
 // NewByBitClient creates a new ByBitClient.
-func NewByBitClient() *Client {
+func NewByBitClient(cfg *config.Config) *Client {
 	return &Client{
-		baseURL:   utils.GetEnv("BYBIT_BASE_URL", ""),
+		baseURL:   cfg.Exchange.ByBit.BaseURL,
 		http:      &http.Client{},
-		wsManager: NewWSManager(),
+		wsManager: NewWSManager(cfg),
 	}
 }
 

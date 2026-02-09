@@ -7,6 +7,8 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 
+	"github.com/lucrumx/bot/internal/config"
+
 	"github.com/lucrumx/bot/internal/models"
 )
 
@@ -18,18 +20,19 @@ type UserFinder interface {
 // AuthService provides methods to authenticate users.
 type AuthService struct {
 	users UserFinder
+	cfg   *config.Config
 }
 
 // Create is a constructor for AuthService.
-func Create(users UserFinder) *AuthService {
-	return &AuthService{users: users}
+func Create(users UserFinder, cfg *config.Config) *AuthService {
+	return &AuthService{users: users, cfg: cfg}
 }
 
 // Login authenticates a user and returns a JWT token if successful.
-func (s *AuthService) Login(email string, password string) (string, error) {
+func (a *AuthService) Login(email string, password string) (string, error) {
 	invalidCredentialsError := errors.New("invalid credentials")
 
-	user, err := s.users.GetByEmail(email)
+	user, err := a.users.GetByEmail(email)
 	if err != nil {
 		return "", invalidCredentialsError
 	}
@@ -38,7 +41,7 @@ func (s *AuthService) Login(email string, password string) (string, error) {
 		return "", invalidCredentialsError
 	}
 
-	token, err := GenerateJWT(user.ID)
+	token, err := a.GenerateJWT(user.ID)
 	if err != nil {
 		log.Printf("Failed to generate jwt token: %v", err)
 		return "", errors.New("failed to generate token")

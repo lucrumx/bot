@@ -14,8 +14,8 @@ import (
 	"github.com/lucrumx/bot/internal/utils/testutils"
 )
 
-func setupRouter(t *testing.T) *gin.Engine {
-	db := testutils.SetupTestDB(t)
+func setupRouter() *gin.Engine {
+	db := testutils.SetupTestDB()
 	testutils.ClearTables(db, "users")
 
 	gin.SetMode(gin.TestMode)
@@ -32,7 +32,7 @@ func setupRouter(t *testing.T) *gin.Engine {
 }
 
 func TestCreateUser_Integration(t *testing.T) {
-	router := setupRouter(t)
+	router := setupRouter()
 
 	userEmail := "test@test.com"
 
