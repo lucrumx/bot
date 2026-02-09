@@ -4,7 +4,6 @@ package main
 import (
 	"context"
 	"errors"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -12,7 +11,10 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/joho/godotenv"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
+
+	"github.com/lucrumx/bot/internal/config"
 
 	"github.com/lucrumx/bot/internal/middleware"
 
@@ -22,16 +24,20 @@ import (
 	authService "github.com/lucrumx/bot/internal/auth/services"
 	usersHandler "github.com/lucrumx/bot/internal/users/http"
 	userService "github.com/lucrumx/bot/internal/users/services"
-
-	"github.com/lucrumx/bot/internal/utils"
 )
 
 func main() {
-	if err := godotenv.Load(); err != nil {
-		log.Println("No .env file found, hope environment variables are set")
+	log.Logger = zerolog.New(zerolog.ConsoleWriter{Out: os.Stderr}).
+		With().
+		Timestamp().
+		Logger()
+
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatal().Err(err).Msg("Error loading config")
 	}
 
-	db := storage.InitDB()
+	db := storage.InitDB(cfg)
 
 	// users
 	usersRepo := userService.CreateUserRepo(db)
@@ -39,7 +45,7 @@ func main() {
 	usersH := usersHandler.Create(usersSrv)
 
 	// auth
-	authSrv := authService.Create(usersSrv)
+	authSrv := authService.Create(usersSrv, cfg)
 	authH := authHandler.Create(authSrv)
 
 	r := gin.Default()
@@ -48,12 +54,12 @@ func main() {
 	r.POST("/auth", authH.Auth)
 
 	private := r.Group("/")
-	private.Use(middleware.JwtAuth())
+	private.Use(middleware.JwtAuth(cfg))
 	{
 		private.GET("/users/me", usersH.GetMe)
 	}
 
-	port := utils.GetEnv("HTTP_SERVER_PORT", ":8080")
+	port := cfg.HTTP.HTTPServerPort
 	log.Printf("Starting server on port %s", port)
 
 	srv := &http.Server{
@@ -63,7 +69,7 @@ func main() {
 
 	go func() {
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Fatalf("Failed to start server: %v", err)
+			log.Fatal().Err(err).Msg("Failed to start server")
 		}
 	}()
 
@@ -71,14 +77,14 @@ func main() {
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
 	<-quit
-	log.Println("Shutting down server...")
+	log.Info().Msg("Shutting down server...")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	if err := srv.Shutdown(ctx); err != nil {
-		log.Fatalf("Failed to gracefully shutdown the server, server forced to shutdown: %v", err)
+		log.Fatal().Err(err).Msg("Failed to gracefully shutdown the server, server forced to shutdown")
 	}
 
-	log.Println("Server shut down successfully")
+	log.Info().Msg("Server shut down successfully. Bye!")
 }

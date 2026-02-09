@@ -7,13 +7,23 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/lucrumx/bot/internal/config"
 )
 
 func TestWSManager_SubscribeTrades(t *testing.T) {
 	t.Skip("Skipping integration test")
 	t.Setenv("BYBIT_WS_BASE_URL", "wss://stream.bybit.com")
 
-	manager := NewWSManager()
+	cfg := &config.Config{
+		Exchange: config.ExchangeConfig{
+			WsClient: config.WsClientConfig{
+				BufferSize: 5000,
+			},
+		},
+	}
+
+	manager := NewWSManager(cfg)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()

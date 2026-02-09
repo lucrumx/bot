@@ -1,0 +1,35 @@
+Example config.yaml structure:
+
+http:
+  auth:
+    jwt_secret: "your-secret-key-here"
+    jwt_expires_in: 24
+  http_server_port: ":8080"
+
+database:
+  host: ""
+  user: ""
+  password: ""
+  db_name: ""
+  port: "5432"
+  ssl_mode: "disable"
+exchange:
+  bybit:
+    base_url: "https://api.bybit.nl"
+    ws_base_url: "wss://stream.bybit.com"
+    api_key: "your-api-key-here"
+    api_secret: "you-api-secret-here"
+  ws_client:
+    buffer_size: 5000
+  bot:
+    check_interval: 5
+    startup_delay: 300
+    filter_tickers_turnover: "100000000"
+    pump_interval: 900
+    target_price_change: 10
+    alert_step: 5
+    rps_timer_interval: 60
+
+notifications:
+  bot_token: "you-telegram-bot-token-here"
+  chat_id: "chat-id-here"

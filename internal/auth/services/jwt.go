@@ -3,13 +3,9 @@ package services
 import (
 	"errors"
 	"fmt"
-	"log"
-	"strconv"
 	"time"
 
 	jwt "github.com/golang-jwt/jwt/v5"
-
-	"github.com/lucrumx/bot/internal/utils"
 )
 
 // Claims represent the JWT claims.
@@ -19,12 +15,8 @@ type Claims struct {
 }
 
 // GenerateJWT generates a JWT for the given user ID.
-func GenerateJWT(userID uint) (string, error) {
-	exp, err := strconv.Atoi(utils.GetEnv("JWT_EXPIRES_IN", "24"))
-	if err != nil {
-		log.Printf("Cannot get expiration of jwt token: %v", err)
-		return "", err
-	}
+func (a *AuthService) GenerateJWT(userID uint) (string, error) {
+	exp := a.cfg.HTTP.Auth.JwtExpiresIn
 
 	payload := Claims{
 		Sub: userID,
@@ -35,12 +27,12 @@ func GenerateJWT(userID uint) (string, error) {
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, payload)
 
-	return token.SignedString([]byte(utils.GetEnv("JWT_SECRET", "")))
+	return token.SignedString([]byte(a.cfg.HTTP.Auth.JwtSecret))
 }
 
 // ValidateJWT validates the given JWT and returns the claims if valid.
-func ValidateJWT(tokenString string) (*Claims, error) {
-	secret := utils.GetEnv("JWT_SECRET", "")
+func (a *AuthService) ValidateJWT(tokenString string) (*Claims, error) {
+	secret := a.cfg.HTTP.Auth.JwtSecret
 
 	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (any, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
@@ -58,5 +50,5 @@ func ValidateJWT(tokenString string) (*Claims, error) {
 		return claims, nil
 	}
 
-	return nil, errors.New("Invalid token claims")
+	return nil, errors.New("invalid token claims")
 }

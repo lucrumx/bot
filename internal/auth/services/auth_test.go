@@ -7,6 +7,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"gorm.io/gorm"
 
+	"github.com/lucrumx/bot/internal/config"
+
 	"github.com/lucrumx/bot/internal/models"
 	"github.com/lucrumx/bot/internal/utils"
 )
@@ -90,9 +92,18 @@ func TestAuthService_Login(t *testing.T) {
 		},
 	}
 
+	cfg := &config.Config{
+		HTTP: config.HTTPConfig{
+			Auth: config.AuthConfig{
+				JwtSecret:    "some-secret-key",
+				JwtExpiresIn: 24,
+			},
+		},
+	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			srv := Create(tt.finder)
+			srv := Create(tt.finder, cfg)
 
 			token, err := srv.Login(tt.email, tt.password)
 			if tt.wantToken {

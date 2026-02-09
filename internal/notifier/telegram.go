@@ -6,7 +6,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/lucrumx/bot/internal/utils"
+	"github.com/lucrumx/bot/internal/config"
 )
 
 const baseURL = "https://api.telegram.org/bot%s/sendMessage"
@@ -17,20 +17,21 @@ type TelegramNotifier struct {
 	chatID     string
 	url        string
 	httpClient *http.Client
+	cfg        *config.Config
 }
 
 // NewTelegramNotifier constructor.
-func NewTelegramNotifier() *TelegramNotifier {
-	token := utils.GetEnv("TELEGRAM_BOT_TOKEN", "")
-	chatID := utils.GetEnv("TELEGRAM_CHAT_ID", "")
+func NewTelegramNotifier(cfg *config.Config) *TelegramNotifier {
+	token := cfg.Notifications.Telegram.BotToken
 
 	sendURL := fmt.Sprintf(baseURL, token)
 
 	return &TelegramNotifier{
 		token:      token,
-		chatID:     chatID,
+		chatID:     cfg.Notifications.Telegram.ChatID,
 		url:        sendURL,
 		httpClient: &http.Client{Timeout: 5 * time.Second},
+		cfg:        cfg,
 	}
 }
 

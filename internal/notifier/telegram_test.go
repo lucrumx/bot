@@ -7,27 +7,35 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/lucrumx/bot/internal/config"
 )
 
-func setEnv(t *testing.T) (string, string) {
+func setConfig() *config.Config {
 	token := "some-token"
 	chatID := "some-chat-id"
 
-	t.Setenv("TELEGRAM_BOT_TOKEN", token)
-	t.Setenv("TELEGRAM_CHAT_ID", chatID)
+	cfg := config.Config{
+		Notifications: config.NotificationsConfig{
+			Telegram: config.TelegramConfig{
+				BotToken: token,
+				ChatID:   chatID,
+			},
+		},
+	}
 
-	return token, chatID
+	return &cfg
 }
 
 func TestTelegramNotifier_Send_Mock(t *testing.T) {
-	_, chatID := setEnv(t)
+	cfg := setConfig()
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, http.MethodPost, r.Method)
 
 		err := r.ParseForm()
 		assert.NoError(t, err)
-		assert.Equal(t, chatID, r.FormValue("chat_id"))
+		assert.Equal(t, cfg.Notifications.Telegram.ChatID, r.FormValue("chat_id"))
 		assert.Equal(t, "test message", r.FormValue("text"))
 		assert.Equal(t, "HTML", r.FormValue("parse_mode"))
 
@@ -36,7 +44,7 @@ func TestTelegramNotifier_Send_Mock(t *testing.T) {
 	}))
 	defer server.Close()
 
-	notifier := NewTelegramNotifier()
+	notifier := NewTelegramNotifier(cfg)
 	notifier.setTestOptions(server.URL, server.Client())
 
 	err := notifier.Send("test message")
@@ -47,9 +55,9 @@ func TestTelegramNotifier_Send_Mock(t *testing.T) {
 func TestTelegramNotifier_Send_Integration(t *testing.T) {
 	t.Skip("Skipping integration test")
 
-	setEnv(t)
+	cfg := setConfig()
 
-	n := NewTelegramNotifier()
+	n := NewTelegramNotifier(cfg)
 
 	symbol := "BTCUSDT"
 

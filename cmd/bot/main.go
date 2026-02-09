@@ -7,28 +7,32 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/joho/godotenv"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
-	notifier2 "github.com/lucrumx/bot/internal/notifier"
+	"github.com/lucrumx/bot/internal/config"
+
+	"github.com/lucrumx/bot/internal/notifier"
 
 	"github.com/lucrumx/bot/internal/exchange/client/bybit"
 	"github.com/lucrumx/bot/internal/exchange/engine"
 )
 
 func main() {
-	// 1. Настройка красивого логирования в консоль (вместо JSON)
-	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+	log.Logger = zerolog.New(zerolog.ConsoleWriter{Out: os.Stderr}).
+		With().
+		Timestamp().
+		Logger()
 
-	if err := godotenv.Load(); err != nil {
-		log.Warn().Msg("No .env file found, hope environment variables are set")
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatal().Err(err).Msg("Error loading config")
 	}
 
-	notifier := notifier2.NewTelegramNotifier()
+	notif := notifier.NewTelegramNotifier(cfg)
 
-	client := bybit.NewByBitClient()
-	bot := engine.NewBot(client, notifier)
+	client := bybit.NewByBitClient(cfg)
+	bot := engine.NewBot(client, notif, cfg)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
