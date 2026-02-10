@@ -16,20 +16,21 @@ A high-performance real-time market anomaly detector for **Bybit Linear Futures*
 - **O(1) Performance**: Detection logic is optimized for constant time complexity, allowing monitoring of hundreds of tickers with minimal CPU overhead.
 - **Parallel Trade Processing**: Worker pool with deterministic symbol hashing; per-worker windows replace a global mutex and improve throughput under load.
 - **WebSocket Orchestration**: Efficient data stream management with automatic reconnection and chunked subscription handling.
+- **Hybrid Math Engine**: Uses `float64` for high-throughput market analysis and momentum detection, while maintaining `decimal` for critical financial calculations and data ingestion.
 
 ## 🛠 Tech Stack
 
 - **Language**: Go 1.24.
 - **Transport**: Bybit V5 REST & WebSocket API.
 - **Notifications**: Telegram Bot API.
-- **Math**: `shopspring/decimal` for fixed-point financial precision.
+- **Math**: Optimized hybrid approach: `float64` for high-throughput data streaming and engine calculations, combined with `shopspring/decimal` for precision-critical business logic and filtering.
 - **Logging**: `zerolog` (structured JSON logging).
 - **Storage**: PostgreSQL + GORM (for Management API).
 
 ## 📈 Performance (Observed)
 
-Real‑time processing of hundreds of trades per second with low latency.  
-On MacBook Pro M2 Pro, the engine processes ~1400 trades/sec (processed) with a 60s reporting window, Bybit Linear Futures, measured over ~24h. Processing is parallelized via a hash‑partitioned worker pool.
+Real‑time processing of hundreds of trades per second with ultra-low latency.  
+On MacBook Pro M2 Pro, the engine handles **~1400+ trades/sec** per reporting window. Performance is maximized through **Zero-Allocation** parsing and a hash‑partitioned worker pool utilizing native CPU float operations.
 
 ## 🏗 Project Structure
 

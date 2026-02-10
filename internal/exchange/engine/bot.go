@@ -29,12 +29,12 @@ type Bot struct {
 
 	workers []*worker
 
-	filterTickersByTurnover decimal.Decimal
+	filterTickersByTurnover float64
 	pumpInterval            int
-	targetPriceChange       decimal.Decimal
+	targetPriceChange       float64
 	startupDelay            time.Duration
 	checkInterval           time.Duration
-	alertStep               decimal.Decimal
+	alertStep               float64
 
 	startTime time.Time
 
@@ -158,7 +158,7 @@ func (b *Bot) filterTickers(tickers []exchange.Ticker) []string {
 			continue
 		}
 
-		if ticker.Turnover24h.GreaterThan(b.filterTickersByTurnover) {
+		if ticker.Turnover24h.GreaterThan(decimal.NewFromFloat(b.filterTickersByTurnover)) {
 			continue
 		}
 
