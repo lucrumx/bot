@@ -1,14 +1,17 @@
 package bybit
 
-import "github.com/lucrumx/bot/internal/exchange"
+import (
+	"github.com/lucrumx/bot/internal/exchange"
+	"github.com/lucrumx/bot/internal/utils"
+)
 
 // wsTradeDTO represents a trade data in websocket trade message.
 type wsTradeDTO struct {
-	T      int64         `json:"T"` // The timestamp (ms) that the order is filled
-	Symbol string        `json:"s"` // The symbol of the order
-	Side   exchange.Side `json:"S"` // The side of the order (Buy or Sell)
-	Volume string        `json:"v"` // Trade size
-	Price  string        `json:"p"` // Trade price
+	T      int64             `json:"T"` // The timestamp (ms) that the order is filled
+	Symbol string            `json:"s"` // The symbol of the order
+	Side   exchange.Side     `json:"S"` // The side of the order (Buy or Sell)
+	Volume utils.JSONFloat64 `json:"v"` // Trade size
+	Price  utils.JSONFloat64 `json:"p"` // Trade price
 }
 
 // WsTradeMessageDTO WsTradeMessage represents a WebSocket trade message containing multiple trade details.

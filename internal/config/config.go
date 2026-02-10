@@ -11,7 +11,6 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/rs/zerolog/log"
-	"github.com/shopspring/decimal"
 	"gopkg.in/yaml.v3"
 
 	"github.com/lucrumx/bot/internal/utils"
@@ -93,7 +92,7 @@ func loadFromEnv(cfg *Config) error {
 	}
 
 	rawTurnover := strings.ReplaceAll(utils.GetEnv("FILTER_TICKERS_TURNOVER", ""), "_", "")
-	filterTickersByTurnover, err := decimal.NewFromString(rawTurnover)
+	filterTickersByTurnover, err := strconv.ParseFloat(rawTurnover, 64)
 	if err != nil {
 		return raiseErrorEnv("FILTER_TICKERS_TURNOVER")
 	}
@@ -103,7 +102,7 @@ func loadFromEnv(cfg *Config) error {
 		return raiseErrorEnv("PUMP_INTERVAL")
 	}
 
-	targetPriceChange, err := decimal.NewFromString(utils.GetEnv("TARGET_PRICE_CHANGE", ""))
+	targetPriceChange, err := strconv.ParseFloat(utils.GetEnv("TARGET_PRICE_CHANGE", ""), 64)
 	if err != nil {
 		return raiseErrorEnv("TARGET_PRICE_CHANGE")
 	}
@@ -118,7 +117,7 @@ func loadFromEnv(cfg *Config) error {
 		return raiseErrorEnv("CHECK_INTERVAL")
 	}
 
-	alertStep, err := decimal.NewFromString(utils.GetEnv("ALERT_STEP", ""))
+	alertStep, err := strconv.ParseFloat(utils.GetEnv("ALERT_STEP", ""), 64)
 	if err != nil {
 		return raiseErrorEnv("ALERT_STEP")
 	}
@@ -226,16 +225,17 @@ func validateConfig(cfg *Config) error {
 	if cfg.Exchange.Bot.StartupDelay.Seconds() == 0 {
 		return raiseErrorYAML("Exchange.Bot.StartupDelay")
 	}
-	if cfg.Exchange.Bot.FilterTickersTurnover.IsZero() {
+	// no calculation and equal check is ok
+	if cfg.Exchange.Bot.FilterTickersTurnover == 0 {
 		return raiseErrorYAML("Exchange.Bot.FilterTickersTurnover")
 	}
 	if cfg.Exchange.Bot.PumpInterval == 0 {
 		return raiseErrorYAML("Exchange.Bot.PumpInterval")
 	}
-	if cfg.Exchange.Bot.TargetPriceChange.IsZero() {
+	if cfg.Exchange.Bot.TargetPriceChange == 0 {
 		return raiseErrorYAML("Exchange.Bot.TargetPriceChange")
 	}
-	if cfg.Exchange.Bot.AlertStep.IsZero() {
+	if cfg.Exchange.Bot.AlertStep == 0 {
 		return raiseErrorYAML("Exchange.Bot.AlertStep")
 	}
 	if cfg.Exchange.Bot.RpsTimerInterval == 0 {

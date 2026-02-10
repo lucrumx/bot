@@ -54,25 +54,14 @@ func mapTicker(d TickerDTO) (exchange.Ticker, error) {
 
 // mapWsTrade maps a WsTradeDTO object to an exchange.Trade object and calculates the USDT amount
 // uses while read and parse a websocket trade message.
-func mapWsTrade(d wsTradeDTO) (exchange.Trade, error) {
-	var trade exchange.Trade
-	var err error
-
-	trade.Symbol = d.Symbol
-	trade.Ts = d.T
-	trade.Side = d.Side
-
-	if trade.Price, err = parseDecimal(d.Price); err != nil {
-		return trade, fmt.Errorf("price: %w", err)
+func mapWsTrade(d wsTradeDTO) exchange.Trade {
+	return exchange.Trade{
+		Symbol: d.Symbol,
+		Ts:     d.T,
+		Side:   d.Side,
+		Price:  float64(d.Price),
+		Volume: float64(d.Volume),
 	}
-
-	if trade.Volume, err = parseDecimal(d.Volume); err != nil {
-		return trade, fmt.Errorf("volume: %w", err)
-	}
-
-	trade.USDTAmount = trade.Price.Mul(trade.Volume)
-
-	return trade, nil
 }
 
 // parseDecimal безопасно парсит строку в decimal, возвращая 0 для пустых строк

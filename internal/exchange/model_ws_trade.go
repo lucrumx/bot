@@ -1,7 +1,5 @@
 package exchange
 
-import "github.com/shopspring/decimal"
-
 // Side represents the direction of a trade, such as "Buy" or "Sell".
 type Side string
 
@@ -15,10 +13,9 @@ const (
 
 // Trade represents a websocket trade with details like symbol, timestamp, price, volume, side, and USDT amount.
 type Trade struct {
-	Symbol     string
-	Ts         int64
-	Price      decimal.Decimal
-	Volume     decimal.Decimal
-	Side       Side
-	USDTAmount decimal.Decimal // price * volume
+	Symbol string
+	Ts     int64
+	Price  float64
+	Volume float64
+	Side   Side
 }

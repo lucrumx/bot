@@ -3,22 +3,20 @@ package engine
 import (
 	"time"
 
-	"github.com/shopspring/decimal"
-
 	"github.com/lucrumx/bot/internal/exchange"
 )
 
 // Window tracks price data over a fixed time window, enabling analysis of trends and alerts for significant changes.
 type Window struct {
-	prices     []decimal.Decimal
+	prices     []float64
 	timestamps []int64
 	windowSize int64
 
 	lastCheck      time.Time
 	lastAlertTime  time.Time
-	lastAlertLevel decimal.Decimal
+	lastAlertLevel float64
 
-	lastPrice decimal.Decimal
+	lastPrice float64
 	lastTs    int64
 }
 
@@ -29,7 +27,7 @@ func NewWindow(size int) *Window {
 
 	return &Window{
 		windowSize: int64(size),
-		prices:     make([]decimal.Decimal, size),
+		prices:     make([]float64, size),
 		timestamps: make([]int64, size),
 	}
 }
@@ -79,22 +77,22 @@ func (w *Window) AddTrade(trade exchange.Trade) {
 
 // CheckGrow evaluates if the price increase over a given interval exceeds a target percentage.
 // It returns the percentage change and a boolean indicating whether the growth condition is met or not.
-func (w *Window) CheckGrow(interval int, targetPercent decimal.Decimal) (decimal.Decimal, bool) {
+func (w *Window) CheckGrow(interval int, targetPercent float64) (float64, bool) {
 	if int64(interval) >= w.windowSize || w.lastTs == 0 {
-		return decimal.Zero, false
+		return 0, false
 	}
 
 	now := time.Now().Unix()
 	pastTs := now - int64(interval)
 
 	// ---- текущая цена ----
-	var currPrice decimal.Decimal
+	var currPrice float64
 	var currTs int64
 
 	if now <= w.lastTs {
 		idx := int(now % w.windowSize)
 		if w.timestamps[idx] != now {
-			return decimal.Zero, false
+			return 0, false
 		}
 		currPrice = w.prices[idx]
 		currTs = now
@@ -106,27 +104,25 @@ func (w *Window) CheckGrow(interval int, targetPercent decimal.Decimal) (decimal
 
 	// ---- прошлая цена ----
 	if pastTs < currTs-w.windowSize {
-		return decimal.Zero, false // вышли за окно
+		return 0, false // вышли за окно
 	}
 
 	pastIdx := int(pastTs % w.windowSize)
 	if w.timestamps[pastIdx] != pastTs {
-		return decimal.Zero, false
+		return 0, false
 	}
 
 	pastPrice := w.prices[pastIdx]
-	if pastPrice.IsZero() {
-		return decimal.Zero, false
+	if pastPrice == 0 {
+		return 0, false
 	}
 
-	change := currPrice.Sub(pastPrice).
-		Div(pastPrice).
-		Mul(decimal.NewFromInt(100))
+	change := (currPrice - pastPrice) / pastPrice * 100
 
-	if change.GreaterThanOrEqual(targetPercent) {
+	if change > targetPercent {
 		return change, true
 	}
-	return decimal.Zero, false
+	return 0, false
 }
 
 // CanCheck determines if the specified minimum interval has elapsed since the last check and updates the last check time.
@@ -139,12 +135,12 @@ func (w *Window) CanCheck(minInterval time.Duration) bool {
 }
 
 // GetAlertState returns the last alert time and level, providing the state of the most recent alert.
-func (w *Window) GetAlertState() (time.Time, decimal.Decimal) {
+func (w *Window) GetAlertState() (time.Time, float64) {
 	return w.lastAlertTime, w.lastAlertLevel
 }
 
 // UpdateAlertState updates the last alert time and level with the specified level.
-func (w *Window) UpdateAlertState(level decimal.Decimal) {
+func (w *Window) UpdateAlertState(level float64) {
 	w.lastAlertTime = time.Now()
 	w.lastAlertLevel = level
 }

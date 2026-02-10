@@ -6,6 +6,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/shopspring/decimal"
+
 	"github.com/lucrumx/bot/internal/exchange"
 )
 
@@ -74,8 +76,8 @@ func (w *worker) checkPump(symbol string, win *Window) {
 		// Памп продолжается. Проверяем, выросли ли мы на "шаг" (например, +5%)
 		// Текущий рост >= Прошлый уровень + Шаг
 		// Пример: 22% >= 15% + 5% -> True
-		nextThreshold := lastAlertLevel.Add(w.bot.alertStep)
-		if change.GreaterThanOrEqual(nextThreshold) {
+		nextThreshold := lastAlertLevel + w.bot.alertStep
+		if change > nextThreshold {
 			needAlert = true
 		}
 	}
@@ -83,7 +85,7 @@ func (w *worker) checkPump(symbol string, win *Window) {
 	if needAlert {
 		win.UpdateAlertState(change)
 
-		priceChangePct := change.StringFixed(2) + "%"
+		priceChangePct := decimal.NewFromFloat(change).StringFixed(2) + "%"
 
 		w.bot.logger.Warn().
 			Str("pair", symbol).

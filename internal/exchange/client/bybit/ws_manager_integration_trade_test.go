@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/require"
 
 	"github.com/lucrumx/bot/internal/config"
@@ -39,13 +40,12 @@ func TestWSManager_SubscribeTrades(t *testing.T) {
 	for trade := range streamChannel {
 		cnt++
 
-		log.Printf("[TRADE %d] %s | %s | price: %s | volume: %s | in usdt: %s ",
+		log.Printf("[TRADE %d] %s | %s | price: %s | volume: %s",
 			cnt,
 			trade.Symbol,
 			trade.Side,
-			trade.Price.StringFixed(4),
-			trade.Volume.StringFixed(4),
-			trade.USDTAmount.StringFixed(4),
+			decimal.NewFromFloat(trade.Price).StringFixed(4),
+			decimal.NewFromFloat(trade.Volume).StringFixed(4),
 		)
 
 		if cnt == 10 {

@@ -2,8 +2,6 @@ package config
 
 import (
 	"time"
-
-	"github.com/shopspring/decimal"
 )
 
 // WsClientConfig contains configuration for websocket client.
@@ -21,13 +19,13 @@ type ByBitConfig struct {
 
 // BotConfig contains configuration for the bot.
 type BotConfig struct {
-	CheckInterval         time.Duration   `yaml:"check_interval"`
-	StartupDelay          time.Duration   `yaml:"startup_delay"`
-	FilterTickersTurnover decimal.Decimal `yaml:"filter_tickers_turnover"`
-	PumpInterval          int             `yaml:"pump_interval"`
-	TargetPriceChange     decimal.Decimal `yaml:"target_price_change"`
-	AlertStep             decimal.Decimal `yaml:"alert_step"`
-	RpsTimerInterval      int             `yaml:"rps_timer_interval"`
+	CheckInterval         time.Duration `yaml:"check_interval"`
+	StartupDelay          time.Duration `yaml:"startup_delay"`
+	FilterTickersTurnover float64       `yaml:"filter_tickers_turnover"`
+	PumpInterval          int           `yaml:"pump_interval"`
+	TargetPriceChange     float64       `yaml:"target_price_change"`
+	AlertStep             float64       `yaml:"alert_step"`
+	RpsTimerInterval      int           `yaml:"rps_timer_interval"`
 }
 
 // ExchangeConfig contains a configuration for an exchange.

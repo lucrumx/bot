@@ -140,7 +140,7 @@ func (c *wsClient) readMessages(ctx context.Context, wsConn *websocket.Conn, out
 
 		if message.Topic != "" {
 			for _, t := range message.Data {
-				trade, err := mapWsTrade(t)
+				trade := mapWsTrade(t)
 				if err != nil {
 					log.Warn().Err(err).Msg("Failed to map trade from Bybit websocket")
 				}
