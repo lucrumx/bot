@@ -36,9 +36,10 @@ On MacBook Pro M2 Pro, the engine processes ~1400 trades/sec (processed) with a 
 The project follows a modular Go layout with a focus on domain-driven design:
 
 - `cmd/`: Application entry points (`bot` and `api`).
+- `internal/config/`: Centralized configuration management (YAML and Environment variables).
 - `internal/exchange/`: Core trading domain, exchange adapters (Bybit), and detection engine.
 - `internal/notifier/`: Notification system (Notifier interface and Telegram implementation).
-- `internal/utils/`: Common utilities, environment, and configuration helpers.
+- `internal/utils/`: Common utilities and test helpers.
 - `internal/auth/ & internal/users/`: Authentication and user management services.
 
 ## 🧪 Testing & Quality Control
@@ -47,17 +48,12 @@ The project follows a modular Go layout with a focus on domain-driven design:
 - **Integration Tests**: Telegram API integration via mock servers and database testing in Docker environments.
 - **Strict Linting**: Enforced code quality via `golangci-lint` with strict configurations.
 
-## ⚙️ Configuration (.env)
+## ⚙️ Configuration
 
-System behavior is managed via environment variables:
-
-- `PUMP_INTERVAL`: Analysis interval in seconds (e.g., 900 for 15 minutes).
-- `TARGET_PRICE_CHANGE`: Target percentage growth for the initial signal (e.g., 15).
-- `ALERT_STEP`: Percentage step for follow-up notifications (e.g., 5).
-- `CHECK_INTERVAL`: Frequency of price checks in seconds.
-- `FILTER_TICKERS_TURNOVER`: Filter tickers by 24h turnover (USDT).
-- `TELEGRAM_BOT_TOKEN`: Your bot token from @BotFather.
-- `TELEGRAM_CHAT_ID`: Destination chat or channel ID.
+The system uses a flexible configuration approach with the following priority: 
+1. **Command Line Flag**: `--config path/to/config.yaml`
+2. **Default File**: `config.yaml` in the root directory (see `config.yaml.dist` for example).
+3. **Environment Variables**: Loaded from `.env` or system environment if no YAML file is found (see `.env.dist` for example).
 
 ## 🚦 Getting Started
 
