@@ -163,7 +163,7 @@ func (c *wsClient) readMessage(ctx context.Context, wsConn *websocket.Conn, outC
 				}
 
 				trade := exchange.Trade{
-					Symbol: val.Symbol,
+					Symbol: strings.TrimSuffix(val.Symbol, "-USDT") + "USDT",
 					Ts:     val.T,
 					Price:  float64(val.Price),
 					Volume: float64(val.Volume),
