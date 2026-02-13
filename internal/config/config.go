@@ -86,6 +86,12 @@ func loadFromEnv(cfg *Config) error {
 		APISecret: utils.GetEnv("BYBIT_API_SECRET", ""),
 	}
 
+	bingX := BingXConfig{
+		WSUrl:     utils.GetEnv("BINGX_WS_URL", ""),
+		APIKey:    utils.GetEnv("BINGX_API_KEY", ""),
+		APISecret: utils.GetEnv("BINGX_API_SECRET", ""),
+	}
+
 	wsClientBufferSize, err := strconv.Atoi(utils.GetEnv("WS_CLIENT_BUFFER_SIZE", "5000"))
 	if err != nil {
 		return raiseErrorEnv("WS_CLIENT_BUFFER_SIZE")
@@ -139,6 +145,7 @@ func loadFromEnv(cfg *Config) error {
 
 	cfg.Exchange = ExchangeConfig{
 		ByBit: byBit,
+		BingX: bingX,
 		WsClient: WsClientConfig{
 			BufferSize: wsClientBufferSize,
 		},
@@ -201,7 +208,8 @@ func validateConfig(cfg *Config) error {
 		cfg.Database.SslMode = "false"
 	}
 
-	// Exchange
+	// Exchanges
+	// ByBit
 	if cfg.Exchange.ByBit.BaseURL == "" {
 		return raiseErrorYAML("Exchange.ByBit.BaseUrl")
 	}
@@ -213,6 +221,17 @@ func validateConfig(cfg *Config) error {
 	}
 	if cfg.Exchange.ByBit.APISecret == "" {
 		return raiseErrorYAML("Exchange.ByBit.APISecret")
+	}
+
+	// BingX
+	if cfg.Exchange.BingX.WSUrl == "" {
+		return raiseErrorYAML("Exchange.BingX.WSUrl")
+	}
+	if cfg.Exchange.BingX.APIKey == "" {
+		return raiseErrorYAML("Exchange.BingX.APIKey")
+	}
+	if cfg.Exchange.BingX.APISecret == "" {
+		return raiseErrorYAML("Exchange.BingX.APISecret")
 	}
 
 	if cfg.Exchange.WsClient.BufferSize == 0 {

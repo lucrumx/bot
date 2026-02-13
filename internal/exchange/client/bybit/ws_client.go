@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -19,6 +20,7 @@ const linearPublicWsURL = "/v5/public/linear"
 const batchSize = 20
 const pingPongInterval = 20
 
+// Metrics TODO: вынести в общий пакет метрик
 // Metrics represents metrics for the WebSocket client.
 type Metrics struct {
 	DroppedTrades atomic.Uint64
@@ -28,6 +30,7 @@ type Metrics struct {
 type wsClient struct {
 	url     string
 	Metrics *Metrics
+	wsMu    sync.Mutex // for protects wsConn writes
 }
 
 func newWsClient(cfg *config.Config) *wsClient {
@@ -59,7 +62,13 @@ func (c *wsClient) Start(ctx context.Context, symbols []string, outChan chan<- e
 	return nil
 }
 
-// subscribeButch sends subscription requests for a batch of symbols to the WebSocket connection.
+func (c *wsClient) writeJSON(wsConn *websocket.Conn, payload interface{}) error {
+	c.wsMu.Lock()
+	defer c.wsMu.Unlock()
+	return wsConn.WriteJSON(payload)
+}
+
+// subscribeBatch sends subscription requests for a batch of symbols to the WebSocket connection.
 func (c *wsClient) subscribeBatch(wsConn *websocket.Conn, symbols []string) error {
 	for i := 0; i < len(symbols); i += batchSize {
 		end := i + batchSize
@@ -79,7 +88,7 @@ func (c *wsClient) subscribeBatch(wsConn *websocket.Conn, symbols []string) erro
 			"args":   args,
 		}
 
-		if err := wsConn.WriteJSON(subReq); err != nil {
+		if err := c.writeJSON(wsConn, subReq); err != nil {
 			return fmt.Errorf("failed to send subscription request: %w", err)
 		}
 	}
@@ -99,7 +108,7 @@ func (c *wsClient) pingPong(ctx context.Context, wsConn *websocket.Conn) {
 			pinPongPayload := map[string]interface{}{
 				"op": "ping",
 			}
-			if err := wsConn.WriteJSON(pinPongPayload); err != nil {
+			if err := c.writeJSON(wsConn, pinPongPayload); err != nil {
 				log.Warn().Err(err).Msg("Failed to send ping pong to Bybit websocket")
 				return
 			}
@@ -141,9 +150,6 @@ func (c *wsClient) readMessages(ctx context.Context, wsConn *websocket.Conn, out
 		if message.Topic != "" {
 			for _, t := range message.Data {
 				trade := mapWsTrade(t)
-				if err != nil {
-					log.Warn().Err(err).Msg("Failed to map trade from Bybit websocket")
-				}
 
 				select {
 				case outChan <- trade:
@@ -165,7 +171,7 @@ func (c *wsClient) LogMetric(ctx context.Context) {
 		case <-ticker.C:
 			droppedTradesCnt := c.Metrics.DroppedTrades.Load()
 			if int(droppedTradesCnt) > 0 {
-				log.Warn().Msgf("metrics: dropped trades=%d", droppedTradesCnt)
+				log.Warn().Msgf("ByBit metrics: dropped trades=%d", droppedTradesCnt)
 			}
 		case <-ctx.Done():
 			return
