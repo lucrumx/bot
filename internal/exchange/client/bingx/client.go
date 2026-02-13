@@ -1,5 +1,4 @@
-// Package bybit provides a client for the ByBit exchange.
-package bybit
+package bingx
 
 import (
 	"context"
@@ -9,18 +8,22 @@ import (
 	"github.com/lucrumx/bot/internal/exchange"
 )
 
-// Client represents a ByBit client.
+const baseURL = "https://open-api.bingx.com"
+
+// Client represents a BingX exchange client.
 type Client struct {
-	baseURL   string
-	http      *http.Client
-	wsManager *exchange.WSManager
+	baseURL    string
+	httpClient *http.Client
+	cfg        *config.Config
+	wsManager  *exchange.WSManager
 }
 
-// NewByBitClient creates a new ByBitClient.
-func NewByBitClient(cfg *config.Config) *Client {
+// NewClient constructor.
+func NewClient(cfg *config.Config) *Client {
 	return &Client{
-		baseURL: cfg.Exchange.ByBit.BaseURL,
-		http:    &http.Client{},
+		baseURL:    baseURL,
+		httpClient: &http.Client{},
+		cfg:        cfg,
 		wsManager: exchange.NewWSManager(cfg, func(c *config.Config) exchange.WsClient {
 			return newWsClient(c)
 		}),

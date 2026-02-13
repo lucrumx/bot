@@ -39,4 +39,8 @@ type Ticker struct {
 
 	// Оборот за 24h
 	Turnover24h decimal.Decimal
+
+	// TODO Add this fields. They present in bingx get ticker response and should be analog in others
+	// MakerFeeRate      float64 `json:"makerFeeRate"`
+	//	TakerFeeRate      float64 `json:"takerFeeRate"`
 }

@@ -69,9 +69,9 @@ func (b *Bot) StartBot(ctx context.Context) (<-chan exchange.Trade, error) {
 	b.startTime = time.Now()
 	b.logger.Info().Msg("bot engine: starting bot and getting tickers")
 
-	tickers, err := b.provider.GetTickers(ctx, nil, exchange.CategoryLinear)
+	tickers, err := b.provider.GetTickers(ctx, []string{}, exchange.CategoryLinear)
 	if err != nil {
-		return nil, fmt.Errorf("bot engine: failed to get tickers")
+		return nil, fmt.Errorf("bot engine: failed to get tickers: %w", err)
 	}
 	if tickers == nil {
 		return nil, fmt.Errorf("tickers not found")

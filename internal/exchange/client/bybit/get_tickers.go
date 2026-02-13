@@ -51,6 +51,10 @@ func (c *Client) GetTickers(ctx context.Context, symbols []string, category exch
 	}
 	defer func() { _ = resp.Body.Close() }()
 
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("ByBit client unexpected http while getting tickers status code: %d", resp.StatusCode)
+	}
+
 	var raw response[struct {
 		List []TickerDTO `json:"list"`
 	}]
