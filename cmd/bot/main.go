@@ -15,7 +15,7 @@ import (
 	"github.com/lucrumx/bot/internal/notifier"
 
 	"github.com/lucrumx/bot/internal/exchange/client/bybit"
-	"github.com/lucrumx/bot/internal/exchange/engine"
+	"github.com/lucrumx/bot/internal/exchange/pumpbot"
 )
 
 func main() {
@@ -32,7 +32,7 @@ func main() {
 	notif := notifier.NewTelegramNotifier(cfg)
 
 	client := bybit.NewByBitClient(cfg)
-	bot := engine.NewBot(client, notif, cfg)
+	bot := pumpbot.NewBot(client, notif, cfg, log.Logger)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()

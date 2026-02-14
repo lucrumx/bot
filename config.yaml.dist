@@ -33,6 +33,10 @@ exchange:
     target_price_change: 10
     alert_step: 5
     rps_timer_interval: 60
+  arbitration_bot:
+    max_age_ms: 60000
+    min_spread_percent: 3
+    cooldown_signal: 30m
 
 notifications:
   bot_token: "you-telegram-bot-token-here"

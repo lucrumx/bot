@@ -1,19 +1,17 @@
-// Package engine contains the bot engine.
-package engine
+// Package pumpbot contains the bot engine.
+package pumpbot
 
 import (
 	"context"
 	"fmt"
 	"hash/fnv"
 	"math"
-	"os"
 	"runtime"
 	"strings"
 	"sync/atomic"
 	"time"
 
 	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 	"github.com/shopspring/decimal"
 
 	"github.com/lucrumx/bot/internal/config"
@@ -46,7 +44,7 @@ type Bot struct {
 }
 
 // NewBot creates a new Bot (constructor).
-func NewBot(provider exchange.Provider, notif notifier.Notifier, cfg *config.Config) *Bot {
+func NewBot(provider exchange.Provider, notif notifier.Notifier, cfg *config.Config, logger zerolog.Logger) *Bot {
 	return &Bot{
 		provider: provider,
 
@@ -59,7 +57,7 @@ func NewBot(provider exchange.Provider, notif notifier.Notifier, cfg *config.Con
 
 		rpsTimerIntervalInSec: cfg.Exchange.Bot.RpsTimerInterval,
 
-		logger:   log.Output(zerolog.ConsoleWriter{Out: os.Stderr}),
+		logger:   logger,
 		notifier: notif,
 	}
 }

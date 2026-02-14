@@ -133,6 +133,20 @@ func loadFromEnv(cfg *Config) error {
 		return raiseErrorEnv("RPS_TIMER_INTERVAL")
 	}
 
+	// ArbitrationBot
+	arbitrationBotMaxAgeMs, err := strconv.ParseInt(utils.GetEnv("ARBITRATION_BOT_MAX_AGE_MS", ""), 10, 64)
+	if err != nil {
+		return raiseErrorEnv("ARBITRATION_BOT_MAX_AGE_MS")
+	}
+	arbitrationBotMinSpreadPercent, err := strconv.ParseFloat(utils.GetEnv("ARBITRATION_BOT_MIN_SPREAD_PERCENT", ""), 64)
+	if err != nil {
+		return raiseErrorEnv("ARBITRATION_BOT_MIN_SPREAD_PERCENT")
+	}
+	arbitrationBotCooldownSignal, err := time.ParseDuration(utils.GetEnv("ARBITRATION_BOT_COOLDOWN_SIGNAL", ""))
+	if err != nil {
+		return raiseErrorEnv("ARBITRATION_BOT_COOLDOWN_SIGNAL")
+	}
+
 	botConfig := BotConfig{
 		CheckInterval:         time.Duration(checkIntervalRaw) * time.Second,
 		StartupDelay:          time.Duration(startupDelay) * time.Second,
@@ -143,13 +157,20 @@ func loadFromEnv(cfg *Config) error {
 		RpsTimerInterval:      rpsTimerIntervalInSec,
 	}
 
+	arbConfig := ArbitrationBotConfig{
+		MaxAgeMs:         arbitrationBotMaxAgeMs,
+		MinSpreadPercent: arbitrationBotMinSpreadPercent,
+		CooldownSignal:   arbitrationBotCooldownSignal,
+	}
+
 	cfg.Exchange = ExchangeConfig{
 		ByBit: byBit,
 		BingX: bingX,
 		WsClient: WsClientConfig{
 			BufferSize: wsClientBufferSize,
 		},
-		Bot: botConfig,
+		Bot:            botConfig,
+		ArbitrationBot: arbConfig,
 	}
 
 	cfg.Notifications = NotificationsConfig{
@@ -259,6 +280,17 @@ func validateConfig(cfg *Config) error {
 	}
 	if cfg.Exchange.Bot.RpsTimerInterval == 0 {
 		return raiseErrorYAML("Exchange.Bot.RpsTimerInterval")
+	}
+
+	// ArbitrationBot
+	if cfg.Exchange.ArbitrationBot.MaxAgeMs == 0 {
+		return raiseErrorYAML("Exchange.ArbitrationBot.MaxAgeMs")
+	}
+	if cfg.Exchange.ArbitrationBot.MinSpreadPercent == 0 {
+		return raiseErrorYAML("Exchange.ArbitrationBot.MinSpreadPercent")
+	}
+	if cfg.Exchange.ArbitrationBot.CooldownSignal.Seconds() == 0 {
+		return raiseErrorYAML("Exchange.ArbitrationBot.CooldownSignal wrong format, should be duration, like 30m")
 	}
 
 	return nil

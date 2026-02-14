@@ -11,20 +11,27 @@ import (
 
 // Client represents a ByBit client.
 type Client struct {
-	baseURL   string
-	http      *http.Client
-	wsManager *exchange.WSManager
+	exchangeName string
+	baseURL      string
+	http         *http.Client
+	wsManager    *exchange.WSManager
 }
 
 // NewByBitClient creates a new ByBitClient.
 func NewByBitClient(cfg *config.Config) *Client {
 	return &Client{
-		baseURL: cfg.Exchange.ByBit.BaseURL,
-		http:    &http.Client{},
+		exchangeName: "ByBit",
+		baseURL:      cfg.Exchange.ByBit.BaseURL,
+		http:         &http.Client{},
 		wsManager: exchange.NewWSManager(cfg, func(c *config.Config) exchange.WsClient {
 			return newWsClient(c)
 		}),
 	}
+}
+
+// GetExchangeName returns the exchange name.
+func (c *Client) GetExchangeName() string {
+	return c.exchangeName
 }
 
 // SubscribeTrades initiates WebSocket trade subscriptions for the given symbols and streams trades to the returned channel.
