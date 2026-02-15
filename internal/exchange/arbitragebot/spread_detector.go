@@ -1,4 +1,4 @@
-package arbitrationbot
+package arbitragebot
 
 import (
 	"fmt"

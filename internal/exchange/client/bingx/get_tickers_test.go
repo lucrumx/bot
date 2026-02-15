@@ -64,7 +64,7 @@ func TestClient_GetTickers_NormalizesTickerSymbols(t *testing.T) {
 	c.baseURL = srv.URL
 	c.httpClient = srv.Client()
 
-	tickers, err := c.GetTickers(context.Background(), []string{}, exchange.CategoryLinear)
+	tickers, err := c.GetTickers(context.Background(), []string{"BTCUSDT"}, exchange.CategoryLinear)
 	require.NoError(t, err)
 	require.Len(t, tickers, 2)
 

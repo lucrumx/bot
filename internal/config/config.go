@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
-	"github.com/rs/zerolog/log"
+	"github.com/rs/zerolog"
 	"gopkg.in/yaml.v3"
 
 	"github.com/lucrumx/bot/internal/utils"
@@ -27,7 +27,7 @@ type Config struct {
 }
 
 // Load loads the application configuration from a YAML file or environment variables.
-func Load() (*Config, error) {
+func Load(logger zerolog.Logger) (*Config, error) {
 	cfg := &Config{}
 
 	configFilePath := flag.String("config", "", "path to config file")
@@ -39,12 +39,12 @@ func Load() (*Config, error) {
 
 	data, err := os.ReadFile(*configFilePath)
 	if err != nil {
-		log.Info().Msgf("YAML config file %s not found, loading configs from env", *configFilePath)
-		if err := loadFromEnv(cfg); err != nil {
+		logger.Info().Msgf("YAML config file %s not found, loading configs from env", *configFilePath)
+		if err := loadFromEnv(cfg, logger); err != nil {
 			return nil, err
 		}
 	} else {
-		log.Info().Msgf("YAML config found, loading from file %s", *configFilePath)
+		logger.Info().Msgf("YAML config found, loading from file %s", *configFilePath)
 
 		if err := yaml.Unmarshal(data, cfg); err != nil {
 			return nil, err
@@ -58,9 +58,9 @@ func Load() (*Config, error) {
 	return cfg, nil
 }
 
-func loadFromEnv(cfg *Config) error {
+func loadFromEnv(cfg *Config, logger zerolog.Logger) error {
 	if err := godotenv.Load(); err != nil {
-		log.Info().Msg("no .env file found, hope environment variables are set")
+		logger.Info().Msg("no .env file found, hope environment variables are set")
 	}
 
 	// HTTP

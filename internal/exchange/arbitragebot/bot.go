@@ -1,9 +1,10 @@
-// Package arbitrationbot provides an arbitration bot engine.
-package arbitrationbot
+// Package arbitragebot provides an arbitrage bot engine.
+package arbitragebot
 
 import (
 	"context"
 	"fmt"
+	"strconv"
 
 	"github.com/rs/zerolog"
 
@@ -13,17 +14,18 @@ import (
 	"github.com/lucrumx/bot/internal/notifier"
 )
 
-// ArbitrationBot represents a bot engine.
-type ArbitrationBot struct {
+// ArbitrageBot represents a bot engine.
+type ArbitrageBot struct {
 	logger   zerolog.Logger
 	notifier notifier.Notifier
 	clients  []exchange.Provider
-	cfg      *config.Config
+	// executor *ExecutionEngine order processing
+	cfg *config.Config
 }
 
 // NewBot creates a new Bot (constructor).
-func NewBot(client []exchange.Provider, notif notifier.Notifier, logger zerolog.Logger, cfg *config.Config) *ArbitrationBot {
-	return &ArbitrationBot{
+func NewBot(client []exchange.Provider, notif notifier.Notifier, logger zerolog.Logger, cfg *config.Config) *ArbitrageBot {
+	return &ArbitrageBot{
 		logger:   logger,
 		notifier: notif,
 		clients:  client,
@@ -39,7 +41,7 @@ type PriceChangeEvent struct {
 	Price        float64
 }
 
-// Prices represents a map of prices for a specific symbol on different exchanges.
+// Prices represent a map of prices for a specific symbol on different exchanges.
 //
 //	{
 //	  "BTCUSDT": {
@@ -53,8 +55,8 @@ type PriceChangeEvent struct {
 //	}
 type Prices map[string]map[string]PricePoint
 
-// Run starts the arbitration bot engine.
-func (a *ArbitrationBot) Run(ctx context.Context, spreadSignalChan chan<- SpreadSignal) error {
+// Run starts the arbitrage bot engine.
+func (a *ArbitrageBot) Run(ctx context.Context) error {
 	if len(a.clients) < 2 {
 		return fmt.Errorf("not enough clients: %d", len(a.clients))
 	}
@@ -98,7 +100,7 @@ func (a *ArbitrationBot) Run(ctx context.Context, spreadSignalChan chan<- Spread
 	}
 
 	tradeEventsCh := make(chan PriceChangeEvent, 2000)
-	errCh := make(chan error, 1)
+	errCh := make(chan error, len(a.clients))
 	go a.grabTrade(ctx, symbols, tradeEventsCh, errCh)
 
 	prices := make(Prices)
@@ -120,20 +122,21 @@ func (a *ArbitrationBot) Run(ctx context.Context, spreadSignalChan chan<- Spread
 			}
 			spreadSignal, hasSpread := spreadDetector.Detect(event.Symbol, prices[event.Symbol])
 			if hasSpread {
-				spreadSignalChan <- *spreadSignal
+				a.handleSignal(spreadSignal)
 			}
 		}
 	}
 }
 
-func (a *ArbitrationBot) grabTrade(ctx context.Context, symbols []string, tradeEventsCh chan<- PriceChangeEvent, errCh chan<- error) {
+func (a *ArbitrageBot) grabTrade(ctx context.Context, symbols []string, tradeEventsCh chan<- PriceChangeEvent, errCh chan<- error) {
 	subCtx, subCancel := context.WithCancel(ctx)
 	defer subCancel()
 
-	sendErrNonBlocking := func(errCh chan<- error, err error) {
+	sendErrNonBlocking := func(err error) {
 		select {
 		case errCh <- err:
 		default:
+			a.logger.Warn().Err(err).Msg("drop err: errCh is full")
 		}
 	}
 
@@ -141,7 +144,7 @@ func (a *ArbitrationBot) grabTrade(ctx context.Context, symbols []string, tradeE
 		exchangeName := client.GetExchangeName()
 		tradeCh, err := client.SubscribeTrades(subCtx, symbols)
 		if err != nil {
-			sendErrNonBlocking(errCh, fmt.Errorf("failed to subscribe to trades on %s: %w", exchangeName, err))
+			sendErrNonBlocking(fmt.Errorf("failed to subscribe to trades on %s: %w", exchangeName, err))
 			return
 		}
 
@@ -153,7 +156,7 @@ func (a *ArbitrationBot) grabTrade(ctx context.Context, symbols []string, tradeE
 					return
 				case trade, ok := <-ch:
 					if !ok {
-						sendErrNonBlocking(errCh, fmt.Errorf("trade channel closed on %s", exchangeName))
+						sendErrNonBlocking(fmt.Errorf("trade channel closed on %s", exchangeName))
 						return
 					}
 
@@ -218,4 +221,34 @@ func checkUniqClient(clients []exchange.Provider) (bool, string, string) {
 	}
 
 	return true, "", names
+}
+
+func (a *ArbitrageBot) handleSignal(spread *SpreadSignal) {
+	spreadStr := strconv.FormatFloat(spread.SpreadPercent, 'f', 2, 64)
+
+	a.logger.Warn().
+		Str("pair", spread.Symbol).
+		Str("spread", spreadStr).
+		Str("buy on", spread.BuyOnExchange).
+		Str("sell on", spread.SellOnExchange).
+		Msg("🔥 SPREAD DETECTED")
+
+	msg := fmt.Sprintf(
+		"<b>🔔 ARBITRAGE: %s</b>\n\n"+
+			"Spread: <code>%s%%</code>\n"+
+			"🟢 Buy:  %s (<b>%.4f</b>)\n"+
+			"🔴 Sell: %s (<b>%.4f</b>)",
+		spread.Symbol,
+		spreadStr,
+		spread.BuyOnExchange, spread.BuyPrice,
+		spread.SellOnExchange, spread.SellPrice,
+	)
+
+	go func() {
+		if err := a.notifier.Send(msg); err != nil {
+			a.logger.Warn().Err(err).Msg("failed to send telegram notification")
+		}
+	}()
+
+	// a.executor.Trade(ctx, spread)
 }

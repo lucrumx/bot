@@ -19,12 +19,10 @@ import (
 )
 
 func main() {
-	log.Logger = zerolog.New(zerolog.ConsoleWriter{Out: os.Stderr}).
-		With().
-		Timestamp().
-		Logger()
+	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
+	logger := log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 
-	cfg, err := config.Load()
+	cfg, err := config.Load(logger)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Error loading config")
 	}

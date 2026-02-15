@@ -40,7 +40,7 @@ func (c *Client) GetTickers(ctx context.Context, symbols []string, category exch
 			// BingX API requires the symbol to be in the format "BTC-USDT"
 			symbol = strings.TrimSuffix(symbol, "USDT") + "-USDT"
 		}
-		query["symbol"] = strings.ToUpper(symbol)
+		fmt.Println("-----------------------: " + symbol)
 	}
 
 	queryStr := getSortedQuery(query, time.Now().UnixMilli(), false)
