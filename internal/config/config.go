@@ -133,16 +133,16 @@ func loadFromEnv(cfg *Config, logger zerolog.Logger) error {
 		return raiseErrorEnv("RPS_TIMER_INTERVAL")
 	}
 
-	// ArbitrationBot
-	arbitrationBotMaxAgeMs, err := strconv.ParseInt(utils.GetEnv("ARBITRATION_BOT_MAX_AGE_MS", ""), 10, 64)
+	// ArbitrageBot
+	ArbitrageBotMaxAgeMs, err := strconv.ParseInt(utils.GetEnv("ARBITRATION_BOT_MAX_AGE_MS", ""), 10, 64)
 	if err != nil {
 		return raiseErrorEnv("ARBITRATION_BOT_MAX_AGE_MS")
 	}
-	arbitrationBotMinSpreadPercent, err := strconv.ParseFloat(utils.GetEnv("ARBITRATION_BOT_MIN_SPREAD_PERCENT", ""), 64)
+	ArbitrageBotMinSpreadPercent, err := strconv.ParseFloat(utils.GetEnv("ARBITRATION_BOT_MIN_SPREAD_PERCENT", ""), 64)
 	if err != nil {
 		return raiseErrorEnv("ARBITRATION_BOT_MIN_SPREAD_PERCENT")
 	}
-	arbitrationBotCooldownSignal, err := time.ParseDuration(utils.GetEnv("ARBITRATION_BOT_COOLDOWN_SIGNAL", ""))
+	ArbitrageBotCooldownSignal, err := time.ParseDuration(utils.GetEnv("ARBITRATION_BOT_COOLDOWN_SIGNAL", ""))
 	if err != nil {
 		return raiseErrorEnv("ARBITRATION_BOT_COOLDOWN_SIGNAL")
 	}
@@ -157,10 +157,10 @@ func loadFromEnv(cfg *Config, logger zerolog.Logger) error {
 		RpsTimerInterval:      rpsTimerIntervalInSec,
 	}
 
-	arbConfig := ArbitrationBotConfig{
-		MaxAgeMs:         arbitrationBotMaxAgeMs,
-		MinSpreadPercent: arbitrationBotMinSpreadPercent,
-		CooldownSignal:   arbitrationBotCooldownSignal,
+	arbConfig := ArbitrageBotConfig{
+		MaxAgeMs:         ArbitrageBotMaxAgeMs,
+		MinSpreadPercent: ArbitrageBotMinSpreadPercent,
+		CooldownSignal:   ArbitrageBotCooldownSignal,
 	}
 
 	cfg.Exchange = ExchangeConfig{
@@ -169,8 +169,8 @@ func loadFromEnv(cfg *Config, logger zerolog.Logger) error {
 		WsClient: WsClientConfig{
 			BufferSize: wsClientBufferSize,
 		},
-		Bot:            botConfig,
-		ArbitrationBot: arbConfig,
+		Bot:          botConfig,
+		ArbitrageBot: arbConfig,
 	}
 
 	cfg.Notifications = NotificationsConfig{
@@ -282,15 +282,15 @@ func validateConfig(cfg *Config) error {
 		return raiseErrorYAML("Exchange.Bot.RpsTimerInterval")
 	}
 
-	// ArbitrationBot
-	if cfg.Exchange.ArbitrationBot.MaxAgeMs == 0 {
-		return raiseErrorYAML("Exchange.ArbitrationBot.MaxAgeMs")
+	// ArbitrageBot
+	if cfg.Exchange.ArbitrageBot.MaxAgeMs == 0 {
+		return raiseErrorYAML("Exchange.ArbitrageBot.MaxAgeMs")
 	}
-	if cfg.Exchange.ArbitrationBot.MinSpreadPercent == 0 {
-		return raiseErrorYAML("Exchange.ArbitrationBot.MinSpreadPercent")
+	if cfg.Exchange.ArbitrageBot.MinSpreadPercent == 0 {
+		return raiseErrorYAML("Exchange.ArbitrageBot.MinSpreadPercent")
 	}
-	if cfg.Exchange.ArbitrationBot.CooldownSignal.Seconds() == 0 {
-		return raiseErrorYAML("Exchange.ArbitrationBot.CooldownSignal wrong format, should be duration, like 30m")
+	if cfg.Exchange.ArbitrageBot.CooldownSignal.Seconds() == 0 {
+		return raiseErrorYAML("Exchange.ArbitrageBot.CooldownSignal wrong format, should be duration, like 30m")
 	}
 
 	return nil

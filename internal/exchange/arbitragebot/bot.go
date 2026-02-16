@@ -148,6 +148,8 @@ func (a *ArbitrageBot) grabTrade(ctx context.Context, symbols []string, tradeEve
 			return
 		}
 
+		a.logger.Info().Msgf("subscribed to trades on %s", exchangeName)
+
 		go func(exchangeName string, ch <-chan exchange.Trade) {
 			defer subCancel()
 			for {

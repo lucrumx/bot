@@ -14,6 +14,7 @@ type SpreadDetector struct {
 	maxAgeMs               int64                // Max age of price in milliseconds
 	cooldownSignalDuration time.Duration        // Cooldown for signals
 	cooldownSignal         map[string]time.Time // Cooldown for signals (not send before)
+	nowFn                  func() time.Time     // Function to get current time (for testing)
 }
 
 // PricePoint represents a price point with timestamp.
@@ -35,10 +36,11 @@ type SpreadSignal struct {
 // NewSpreadDetector creates a new SpreadDetector.
 func NewSpreadDetector(cfg *config.Config) *SpreadDetector {
 	return &SpreadDetector{
-		minSpreadPercent:       cfg.Exchange.ArbitrationBot.MinSpreadPercent,
-		maxAgeMs:               cfg.Exchange.ArbitrationBot.MaxAgeMs,
-		cooldownSignalDuration: cfg.Exchange.ArbitrationBot.CooldownSignal,
+		minSpreadPercent:       cfg.Exchange.ArbitrageBot.MinSpreadPercent,
+		maxAgeMs:               cfg.Exchange.ArbitrageBot.MaxAgeMs,
+		cooldownSignalDuration: cfg.Exchange.ArbitrageBot.CooldownSignal,
 		cooldownSignal:         make(map[string]time.Time),
+		nowFn:                  time.Now,
 	}
 }
 
@@ -55,7 +57,7 @@ func NewSpreadDetector(cfg *config.Config) *SpreadDetector {
 //		 },
 //	}
 func (d *SpreadDetector) Detect(symbol string, pricesByExchange map[string]PricePoint) (*SpreadSignal, bool) {
-	now := time.Now()
+	now := d.nowFn()
 
 	freshestPrice := make(map[string]PricePoint, len(pricesByExchange))
 
@@ -93,7 +95,7 @@ func (d *SpreadDetector) Detect(symbol string, pricesByExchange map[string]Price
 				}
 			}
 
-			// TODO сейчас порог это gross. Добавить расчет net порога с учтом sell fee, buy fee,
+			// TODO сейчас порог это gross. Добавить расчет net порога с учетом sell fee, buy fee,
 			// TODO какое-нибудь проскальзываение ...
 			spreadPercent := (sellPrice.Price - buyPrice.Price) / buyPrice.Price * 100
 
@@ -119,7 +121,7 @@ func (d *SpreadDetector) Detect(symbol string, pricesByExchange map[string]Price
 		return nil, false
 	}
 
-	d.cooldownSignal[bestCooldownKey] = time.Now()
+	d.cooldownSignal[bestCooldownKey] = d.nowFn()
 
 	return spread, true
 }
