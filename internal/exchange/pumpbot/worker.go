@@ -1,4 +1,4 @@
-package engine
+package pumpbot
 
 import (
 	"context"
@@ -93,7 +93,7 @@ func (w *worker) checkPump(symbol string, win *Window) {
 			Msg("🔥 PUMP DETECTED")
 
 		msg := fmt.Sprintf(
-			"<b>🚀 PUMP DETECTED: <a href=\"https://www.bybit.com/trade/usdt/%s\">%s</a></b>\n"+
+			"<b>🚀 PUMP DETECTED:</b> <a href=\"https://www.bybit.com/trade/usdt/%s\">%s</a>\n"+
 				"Price Change: <b>+%s%%</b>",
 			symbol,
 			symbol,
@@ -102,7 +102,7 @@ func (w *worker) checkPump(symbol string, win *Window) {
 
 		err := w.bot.notifier.Send(msg)
 		if err != nil {
-			w.bot.logger.Error().Err(err).Msg("failed to send telegram notification")
+			w.bot.logger.Warn().Err(err).Msg("failed to send telegram notification")
 		}
 	}
 }

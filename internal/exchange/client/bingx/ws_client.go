@@ -145,11 +145,16 @@ func (c *wsClient) readMessage(ctx context.Context, wsConn *websocket.Conn, outC
 				if err != nil {
 					log.Warn().Err(err).Msg("Failed to send pong to BingX websocket (after decode binary)")
 				}
+				continue
+			}
+
+			if message == "Pong" {
+				continue
 			}
 
 			var jsonMessage WsTradeMessageDTO
 			if err := json.Unmarshal([]byte(message), &jsonMessage); err != nil {
-				log.Warn().Err(err).Msgf("Failed to unmarshal message from Bybit websocket %v", message)
+				log.Warn().Err(err).Msgf("Failed to unmarshal message from BingX websocket message: %v", message)
 			}
 
 			if jsonMessage.Code != 0 {

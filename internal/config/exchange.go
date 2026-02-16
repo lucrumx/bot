@@ -35,10 +35,18 @@ type BotConfig struct {
 	RpsTimerInterval      int           `yaml:"rps_timer_interval"`
 }
 
+// ArbitrageBotConfig contains configuration for arbitration bot.
+type ArbitrageBotConfig struct {
+	MaxAgeMs         int64         `yaml:"max_age_ms"`
+	MinSpreadPercent float64       `yaml:"min_spread_percent"`
+	CooldownSignal   time.Duration `yaml:"cooldown_signal"`
+}
+
 // ExchangeConfig contains a configuration for an exchange.
 type ExchangeConfig struct {
-	ByBit    ByBitConfig    `yaml:"bybit"`
-	BingX    BingXConfig    `yaml:"bingx"`
-	WsClient WsClientConfig `yaml:"ws_client"`
-	Bot      BotConfig
+	ByBit        ByBitConfig        `yaml:"bybit"`
+	BingX        BingXConfig        `yaml:"bingx"`
+	WsClient     WsClientConfig     `yaml:"ws_client"`
+	Bot          BotConfig          `yaml:"bot"`
+	ArbitrageBot ArbitrageBotConfig `yaml:"arbitration_bot"`
 }

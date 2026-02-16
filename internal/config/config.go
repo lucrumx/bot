@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
-	"github.com/rs/zerolog/log"
+	"github.com/rs/zerolog"
 	"gopkg.in/yaml.v3"
 
 	"github.com/lucrumx/bot/internal/utils"
@@ -27,7 +27,7 @@ type Config struct {
 }
 
 // Load loads the application configuration from a YAML file or environment variables.
-func Load() (*Config, error) {
+func Load(logger zerolog.Logger) (*Config, error) {
 	cfg := &Config{}
 
 	configFilePath := flag.String("config", "", "path to config file")
@@ -39,12 +39,12 @@ func Load() (*Config, error) {
 
 	data, err := os.ReadFile(*configFilePath)
 	if err != nil {
-		log.Info().Msgf("YAML config file %s not found, loading configs from env", *configFilePath)
-		if err := loadFromEnv(cfg); err != nil {
+		logger.Info().Msgf("YAML config file %s not found, loading configs from env", *configFilePath)
+		if err := loadFromEnv(cfg, logger); err != nil {
 			return nil, err
 		}
 	} else {
-		log.Info().Msgf("YAML config found, loading from file %s", *configFilePath)
+		logger.Info().Msgf("YAML config found, loading from file %s", *configFilePath)
 
 		if err := yaml.Unmarshal(data, cfg); err != nil {
 			return nil, err
@@ -58,9 +58,9 @@ func Load() (*Config, error) {
 	return cfg, nil
 }
 
-func loadFromEnv(cfg *Config) error {
+func loadFromEnv(cfg *Config, logger zerolog.Logger) error {
 	if err := godotenv.Load(); err != nil {
-		log.Info().Msg("no .env file found, hope environment variables are set")
+		logger.Info().Msg("no .env file found, hope environment variables are set")
 	}
 
 	// HTTP
@@ -133,6 +133,20 @@ func loadFromEnv(cfg *Config) error {
 		return raiseErrorEnv("RPS_TIMER_INTERVAL")
 	}
 
+	// ArbitrageBot
+	ArbitrageBotMaxAgeMs, err := strconv.ParseInt(utils.GetEnv("ARBITRATION_BOT_MAX_AGE_MS", ""), 10, 64)
+	if err != nil {
+		return raiseErrorEnv("ARBITRATION_BOT_MAX_AGE_MS")
+	}
+	ArbitrageBotMinSpreadPercent, err := strconv.ParseFloat(utils.GetEnv("ARBITRATION_BOT_MIN_SPREAD_PERCENT", ""), 64)
+	if err != nil {
+		return raiseErrorEnv("ARBITRATION_BOT_MIN_SPREAD_PERCENT")
+	}
+	ArbitrageBotCooldownSignal, err := time.ParseDuration(utils.GetEnv("ARBITRATION_BOT_COOLDOWN_SIGNAL", ""))
+	if err != nil {
+		return raiseErrorEnv("ARBITRATION_BOT_COOLDOWN_SIGNAL")
+	}
+
 	botConfig := BotConfig{
 		CheckInterval:         time.Duration(checkIntervalRaw) * time.Second,
 		StartupDelay:          time.Duration(startupDelay) * time.Second,
@@ -143,13 +157,20 @@ func loadFromEnv(cfg *Config) error {
 		RpsTimerInterval:      rpsTimerIntervalInSec,
 	}
 
+	arbConfig := ArbitrageBotConfig{
+		MaxAgeMs:         ArbitrageBotMaxAgeMs,
+		MinSpreadPercent: ArbitrageBotMinSpreadPercent,
+		CooldownSignal:   ArbitrageBotCooldownSignal,
+	}
+
 	cfg.Exchange = ExchangeConfig{
 		ByBit: byBit,
 		BingX: bingX,
 		WsClient: WsClientConfig{
 			BufferSize: wsClientBufferSize,
 		},
-		Bot: botConfig,
+		Bot:          botConfig,
+		ArbitrageBot: arbConfig,
 	}
 
 	cfg.Notifications = NotificationsConfig{
@@ -259,6 +280,24 @@ func validateConfig(cfg *Config) error {
 	}
 	if cfg.Exchange.Bot.RpsTimerInterval == 0 {
 		return raiseErrorYAML("Exchange.Bot.RpsTimerInterval")
+	}
+
+	// ArbitrageBot
+	if cfg.Exchange.ArbitrageBot.MaxAgeMs == 0 {
+		return raiseErrorYAML("Exchange.ArbitrageBot.MaxAgeMs")
+	}
+	if cfg.Exchange.ArbitrageBot.MinSpreadPercent == 0 {
+		return raiseErrorYAML("Exchange.ArbitrageBot.MinSpreadPercent")
+	}
+	if cfg.Exchange.ArbitrageBot.CooldownSignal.Seconds() == 0 {
+		return raiseErrorYAML("Exchange.ArbitrageBot.CooldownSignal wrong format, should be duration, like 30m")
+	}
+
+	if cfg.Notifications.Telegram.BotToken == "" {
+		return raiseErrorYAML("Notifications.Telegram.BotToken")
+	}
+	if cfg.Notifications.Telegram.ChatID == "" {
+		return raiseErrorYAML("Notifications.Telegram.ChatID")
 	}
 
 	return nil

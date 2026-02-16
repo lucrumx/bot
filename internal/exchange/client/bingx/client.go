@@ -12,22 +12,29 @@ const baseURL = "https://open-api.bingx.com"
 
 // Client represents a BingX exchange client.
 type Client struct {
-	baseURL    string
-	httpClient *http.Client
-	cfg        *config.Config
-	wsManager  *exchange.WSManager
+	exchangeName string
+	baseURL      string
+	httpClient   *http.Client
+	cfg          *config.Config
+	wsManager    *exchange.WSManager
 }
 
 // NewClient constructor.
 func NewClient(cfg *config.Config) *Client {
 	return &Client{
-		baseURL:    baseURL,
-		httpClient: &http.Client{},
-		cfg:        cfg,
+		exchangeName: "BingX",
+		baseURL:      baseURL,
+		httpClient:   &http.Client{},
+		cfg:          cfg,
 		wsManager: exchange.NewWSManager(cfg, func(c *config.Config) exchange.WsClient {
 			return newWsClient(c)
 		}),
 	}
+}
+
+// GetExchangeName returns the exchange name.
+func (c *Client) GetExchangeName() string {
+	return c.exchangeName
 }
 
 // SubscribeTrades initiates WebSocket trade subscriptions for the given symbols and streams trades to the returned channel.

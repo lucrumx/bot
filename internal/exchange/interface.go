@@ -16,6 +16,7 @@ const (
 
 // Provider represents an exchange provider (ByBit, Binance, BingX, and etc.).
 type Provider interface {
+	GetExchangeName() string
 	GetTickers(ctx context.Context, symbols []string, category Category) ([]Ticker, error)
 	SubscribeTrades(ctx context.Context, symbols []string) (<-chan Trade, error)
 }
