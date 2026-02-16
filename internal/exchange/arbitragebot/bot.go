@@ -23,7 +23,7 @@ type ArbitrageBot struct {
 	notifier notifier.Notifier
 	clients  []exchange.Provider
 	// executor *ExecutionEngine order processing
-	cfg *config.Config
+	cfg        *config.Config
 	tradeCount int64
 }
 
@@ -263,7 +263,7 @@ func (a *ArbitrageBot) handleSignal(spread *SpreadSignal) {
 	// a.executor.Trade(ctx, spread)
 }
 
-func (a * ArbitrageBot) logTradeCount(ctx context.Context) {
+func (a *ArbitrageBot) logTradeCount(ctx context.Context) {
 	ticker := time.NewTicker(time.Second * time.Duration(a.cfg.Exchange.Bot.RpsTimerInterval))
 	defer ticker.Stop()
 
@@ -271,22 +271,23 @@ func (a * ArbitrageBot) logTradeCount(ctx context.Context) {
 
 	for {
 		select {
-			case <-ctx.Done():
-				return
-			case <-ticker.C:
-				lastCount := atomic.LoadInt64(&a.tradeCount)
-				diff := lastCount - lastTradeCount;
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			total := atomic.LoadInt64(&a.tradeCount)
+			diff := total - lastTradeCount
 
-				rps := float64(diff) / float64(a.cfg.Exchange.Bot.RpsTimerInterval)
+			rps := float64(diff) / float64(a.cfg.Exchange.Bot.RpsTimerInterval)
 
-				go func() {
-					a.logger.Info().
-						Int64("total", lastCount).
-						Int64("diff", diff).
-						Float64("rps", math.Round(rps)).
-						Msg("trade count and rps")
-				}()
+			go func() {
+				a.logger.Info().
+					Int64("total", total).
+					Int64("diff", diff).
+					Float64("rps", math.Round(rps)).
+					Msg("trade count and rps")
+			}()
 
+			lastTradeCount = total
 		}
 	}
 }
