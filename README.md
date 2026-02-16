@@ -1,60 +1,69 @@
-# LucrumX - High-Performance Crypto Pump Detector
+# LucrumX - Multi-Exchange Crypto Trading Engine
 
 ![Go Version](https://img.shields.io/badge/Go-1.24-00ADD8?style=flat&logo=go)
 ![Build Status](https://img.shields.io/github/actions/workflow/status/lucrumx/bot/tests.yml?branch=main)
 
-A high-performance real-time market anomaly detector for **Bybit Linear Futures** (USDT). The system monitors price dynamics to identify significant momentum movements (pumps) using optimized sliding window logic and intelligent alerting.
+A high-performance real-time trading engine for crypto market analysis and automated detection. The system monitors multiple exchanges simultaneously to identify market anomalies and arbitrage opportunities.
+
+## 🤖 System Components
+
+### 1. Pump Detector
+Real-time detection of significant price impulses on futures markets.
+- **Algorithm**: Continuous sliding window on a ring-buffer with a Gap Filling mechanism.
+- **Adaptive Thresholds**: Uses market-dynamic factors to filter noise.
+- **Intelligent Alerting**: Multi-level notifications (Alert Step) and signal cooldowns.
+
+### 2. Arbitrage Bot
+Real-time spread monitoring between different exchanges.
+- **Symbol Discovery**: Automatic cross-exchange instrument intersection.
+- **Normalization**: Standardizes disparate symbol formats (e.g., `BTC-USDT` vs `BTCUSDT`).
+- **Spread Detection**: Calculates clean (Net) spreads with stale price protection (MaxAge) and signal throttling.
 
 ## 🚀 Core Features
 
-- **Momentum Detection (30m)**: Tracks significant price impulses over configurable intervals (e.g., 15% growth over 15 minutes).
-- **Intelligent Alerting System**: 
-  - **Alert Step**: Sends follow-up notifications if the price continues to rise (e.g., every +5% after the initial signal).
-  - **Cooldown**: Prevents spam and redundant signals for the same price movement.
-- **Continuous Sliding Window**: Custom ring-buffer implementation with **Gap Filling** mechanism (automatically populates missing data points during low liquidity), ensuring seamless analysis.
-- **Multi-channel Notifier**: Telegram integration for instant alerts with HTML formatting support.
-- **O(1) Performance**: Detection logic is optimized for constant time complexity, allowing monitoring of hundreds of tickers with minimal CPU overhead.
-- **Parallel Trade Processing**: Worker pool with deterministic symbol hashing; per-worker windows replace a global mutex and improve throughput under load.
-- **WebSocket Orchestration**: Efficient data stream management with automatic reconnection and chunked subscription handling.
-- **Hybrid Math Engine**: Uses `float64` for high-throughput market analysis and momentum detection, while maintaining `decimal` for critical financial calculations and data ingestion.
+- **Multi-Exchange Support**: Native integrations for **Bybit (V5)** and **BingX (V2 Swap)** via optimized WebSocket clients.
+- **WebSocket Orchestration**: Centralized `WSManager` handling chunked subscriptions, non-blocking backpressure management, and connection lifecycle.
+- **O(1) Detection Performance**: Logic is optimized for constant time complexity, regardless of the number of monitored tickers.
+- **Hybrid Math Engine**: Employs `float64` for high-throughput stream processing and `shopspring/decimal` for precision-critical filtering and financial logic.
 
 ## 🛠 Tech Stack
 
 - **Language**: Go 1.24.
-- **Transport**: Bybit V5 REST & WebSocket API.
+- **Transport**: REST & WebSocket API (Bybit, BingX).
 - **Notifications**: Telegram Bot API.
-- **Math**: Optimized hybrid approach: `float64` for high-throughput data streaming and engine calculations, combined with `shopspring/decimal` for precision-critical business logic and filtering.
 - **Logging**: `zerolog` (structured JSON logging).
-- **Storage**: PostgreSQL + GORM (for Management API).
+- **Storage**: PostgreSQL + GORM (Management API).
 
 ## 📈 Performance (Observed)
 
-Real‑time processing of hundreds of trades per second with ultra-low latency.  
-On MacBook Pro M2 Pro, the engine handles **~1400+ trades/sec** per reporting window. Performance is maximized through **Zero-Allocation** parsing and a hash‑partitioned worker pool utilizing native CPU float operations.
+The engine is built for dense data streams with ultra-low latency:
+- **Pump Bot (Bybit)**: ~1400+ trades/sec on MacBook Pro M2 Pro.
+- **Arbitrage Bot (Bybit + BingX)**: Monitoring 400+ common pairs. Aggregate throughput exceeds **2500+ events/sec** with zero-allocation parsing and parallel worker pools.
 
 ## 🏗 Project Structure
 
-The project follows a modular Go layout with a focus on domain-driven design:
+- `cmd/pumpbot/`: Pump Detector entry point.
+- `cmd/arbitragebot/`: Arbitrage Bot entry point.
+- `internal/exchange/`: 
+    - `client/`: Bybit and BingX exchange adapters.
+    - `pumpbot/`: Core logic for impulse detection.
+    - `arbitragebot/`: Core logic for spread monitoring.
+    - `ws_manager.go`: Unified WebSocket connection manager.
+- `internal/notifier/`: Telegram notification system.
+- `internal/config/`: Configuration management (YAML + ENV).
 
-- `cmd/`: Application entry points (`bot` and `api`).
-- `internal/config/`: Centralized configuration management (YAML and Environment variables).
-- `internal/exchange/`: Core trading domain, exchange adapters (Bybit), and detection engine.
-- `internal/notifier/`: Notification system (Notifier interface and Telegram implementation).
-- `internal/utils/`: Common utilities and test helpers.
-- `internal/auth/ & internal/users/`: Authentication and user management services.
+## 🧪 Testing
 
-## 🧪 Testing & Quality Control
-
-- **Unit Tests**: Comprehensive coverage for core logic (Sliding Window, Gap Filling, Alert Logic).
-- **Integration Tests**: Telegram API integration via mock servers and database testing in Docker environments.
-- **Strict Linting**: Enforced code quality via `golangci-lint` with strict configurations.
+- **Unit Tests**: Full coverage for Sliding Window, Spread Detection, and Cooldown logic.
+- **Integration Tests**: Docker-based database tests and Telegram mock servers.
+- **Strict Linting**: Enforced via `golangci-lint`.
 
 ## ⚙️ Configuration
 
 The system uses a flexible configuration approach with the following priority: 
 1. **Command Line Flag**: `--config path/to/config.yaml`
-2. **Default File**: `config.yaml` in the root directory (see `config.yaml.dist` for example).
-3. **Environment Variables**: Loaded from `.env` or system environment if no YAML file is found (see `.env.dist` for example).
+2. **Default File**: `config.yaml` in the root directory.
+3. **Environment Variables**: Loaded from `.env` or system environment if no YAML file is found.
 
 ## 🚦 Getting Started
 
@@ -63,15 +72,6 @@ The system uses a flexible configuration approach with the following priority:
    git clone https://github.com/lucrumx/bot.git
    cp .env.dist .env
    ```
-2. **Install Dependencies**:
-   ```bash
-   go mod download
-   ```
-3. **Run Tests**:
-   ```bash
-   make test
-   ```
-4. **Launch Bot**:
-   ```bash
-   make run-bot
-   ```
+2. **Install Dependencies**: `go mod download`
+3. **Run Arbitrage Bot**: `go run cmd/arbitragebot/main.go`
+4. **Run Pump Bot**: `go run cmd/pumpbot/main.go`
