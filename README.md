@@ -36,9 +36,9 @@ Real-time spread monitoring between different exchanges.
 
 ## 📈 Performance (Observed)
 
-The engine is built for dense data streams with ultra-low latency:
+The engine is built for dense data streams with low latency. Values below are current observed throughput from runtime logs, not peak limits:
 - **Pump Bot (Bybit)**: ~1400+ trades/sec on MacBook Pro M2 Pro.
-- **Arbitrage Bot (Bybit + BingX)**: Monitoring 400+ common pairs. Aggregate throughput exceeds **2500+ events/sec** with zero-allocation parsing and parallel worker pools.
+- **Arbitrage Bot (Bybit + BingX)**: Monitoring **439 common pairs**. Current aggregate throughput is about **2600-2800 events/sec** (for example, 2628 and 2836 events/sec in consecutive 60s windows).
 
 ## 🏗 Project Structure
 
