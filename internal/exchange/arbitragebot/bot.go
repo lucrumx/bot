@@ -4,7 +4,10 @@ package arbitragebot
 import (
 	"context"
 	"fmt"
+	"math"
 	"strconv"
+	"sync/atomic"
+	"time"
 
 	"github.com/rs/zerolog"
 
@@ -21,6 +24,7 @@ type ArbitrageBot struct {
 	clients  []exchange.Provider
 	// executor *ExecutionEngine order processing
 	cfg *config.Config
+	tradeCount int64
 }
 
 // NewBot creates a new Bot (constructor).
@@ -101,7 +105,9 @@ func (a *ArbitrageBot) Run(ctx context.Context) error {
 
 	tradeEventsCh := make(chan PriceChangeEvent, 2000)
 	errCh := make(chan error, len(a.clients))
+
 	go a.grabTrade(ctx, symbols, tradeEventsCh, errCh)
+	go a.logTradeCount(ctx)
 
 	prices := make(Prices)
 	spreadDetector := NewSpreadDetector(a.cfg)
@@ -113,6 +119,8 @@ func (a *ArbitrageBot) Run(ctx context.Context) error {
 		case err := <-errCh:
 			return fmt.Errorf("failed to grab trade: %w", err)
 		case event := <-tradeEventsCh:
+			atomic.AddInt64(&a.tradeCount, 1)
+
 			if prices[event.Symbol] == nil {
 				prices[event.Symbol] = map[string]PricePoint{}
 			}
@@ -253,4 +261,32 @@ func (a *ArbitrageBot) handleSignal(spread *SpreadSignal) {
 	}()
 
 	// a.executor.Trade(ctx, spread)
+}
+
+func (a * ArbitrageBot) logTradeCount(ctx context.Context) {
+	ticker := time.NewTicker(time.Second * time.Duration(a.cfg.Exchange.Bot.RpsTimerInterval))
+	defer ticker.Stop()
+
+	lastTradeCount := int64(0)
+
+	for {
+		select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				lastCount := atomic.LoadInt64(&a.tradeCount)
+				diff := lastCount - lastTradeCount;
+
+				rps := float64(diff) / float64(a.cfg.Exchange.Bot.RpsTimerInterval)
+
+				go func() {
+					a.logger.Info().
+						Int64("total", lastCount).
+						Int64("diff", diff).
+						Float64("rps", math.Round(rps)).
+						Msg("trade count and rps")
+				}()
+
+		}
+	}
 }
