@@ -39,5 +39,6 @@ exchange:
     cooldown_signal: 30m
 
 notifications:
-  bot_token: "you-telegram-bot-token-here"
-  chat_id: "chat-id-here"
+  telegram:
+    bot_token: "your-bot-token-here"
+    chat_id: "your-chat-id-here"

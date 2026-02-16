@@ -293,5 +293,12 @@ func validateConfig(cfg *Config) error {
 		return raiseErrorYAML("Exchange.ArbitrageBot.CooldownSignal wrong format, should be duration, like 30m")
 	}
 
+	if cfg.Notifications.Telegram.BotToken == "" {
+		return raiseErrorYAML("Notifications.Telegram.BotToken")
+	}
+	if cfg.Notifications.Telegram.ChatID == "" {
+		return raiseErrorYAML("Notifications.Telegram.ChatID")
+	}
+
 	return nil
 }

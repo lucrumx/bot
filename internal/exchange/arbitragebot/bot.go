@@ -236,10 +236,10 @@ func (a *ArbitrageBot) handleSignal(spread *SpreadSignal) {
 		Msg("🔥 SPREAD DETECTED")
 
 	msg := fmt.Sprintf(
-		"<b>🔔 ARBITRAGE: %s</b>\n\n"+
-			"Spread: <code>%s%%</code>\n"+
-			"🟢 Buy:  %s (<b>%.4f</b>)\n"+
-			"🔴 Sell: %s (<b>%.4f</b>)",
+		"<b>🔔 ARBITRAGE: Ticker - %s</b>\n\n"+
+			"Spread: <code>%s%%</code>\n\n"+
+			"🟢 Buy:  %s - <b>%.4f</b>\n"+
+			"🔴 Sell: %s - <b>%.4f</b>",
 		spread.Symbol,
 		spreadStr,
 		spread.BuyOnExchange, spread.BuyPrice,
