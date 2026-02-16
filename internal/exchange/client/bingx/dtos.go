@@ -23,11 +23,11 @@ type ResponseGetTickerDTO struct {
 
 // WsTradeDataDTO represents a trade data transfer object.
 type WsTradeDataDTO struct {
-	T      int64             `json:"T"`        // Trade time
-	Volume utils.JSONFloat64 `json:"quantity"` // Volume quantity
-	Price  utils.JSONFloat64 `json:"price"`    // price
-	M      bool              `json:"m"`        // Whether the buyer is a market maker. If true, this trade is a passive sell order; otherwise, it is a passive buy order.
-	Symbol string            `json:"s"`        //Trading pair
+	T      int64             `json:"T"` // Trade time
+	Volume utils.JSONFloat64 `json:"q"` // Volume quantity
+	Price  utils.JSONFloat64 `json:"p"` // price
+	M      bool              `json:"m"` // Whether the buyer is a market maker. If true, this trade is a passive sell order; otherwise, it is a passive buy order.
+	Symbol string            `json:"s"` //Trading pair
 }
 
 // WsTradeMessageDTO represents a trade message transfer object.
