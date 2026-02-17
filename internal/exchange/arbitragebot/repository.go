@@ -8,14 +8,14 @@ import (
 	"github.com/lucrumx/bot/internal/models"
 )
 
+// ArbitrageSpreadRepository represents a db repository for arbitrage spreads.
 type ArbitrageSpreadRepository interface {
 	Create(ctx context.Context, spread *models.ArbitrageSpread) error
 	Update(ctx context.Context, spread *models.ArbitrageSpread, where FindFilter) error
 	FindAll(ctx context.Context, f FindFilter) ([]*models.ArbitrageSpread, error)
 }
 
-type ArbitrageSpreadStatus string
-
+// FindFilter is a filter for finding arbitrage spreads in the repository.
 type FindFilter struct {
 	Symbol      string
 	BuyEx       string
@@ -24,18 +24,22 @@ type FindFilter struct {
 	NotInStatus []models.ArbitrageSpreadStatus
 }
 
+// GormArbitrageSpreadRepository is a GORM implementation of ArbitrageSpreadRepository.
 type GormArbitrageSpreadRepository struct {
 	db *gorm.DB
 }
 
+// NewGormArbitrageSpreadRepository creates a new GormArbitrageSpreadRepository.
 func NewGormArbitrageSpreadRepository(db *gorm.DB) *GormArbitrageSpreadRepository {
 	return &GormArbitrageSpreadRepository{db: db}
 }
 
+// Create creates a new arbitrage spread in the repository.
 func (r *GormArbitrageSpreadRepository) Create(ctx context.Context, spread *models.ArbitrageSpread) error {
 	return r.db.WithContext(ctx).Create(spread).Error
 }
 
+// Update updates an existing arbitrage spread in the repository based on the provided filter.
 func (r *GormArbitrageSpreadRepository) Update(ctx context.Context, spread *models.ArbitrageSpread, f FindFilter) error {
 	tx := r.db.WithContext(ctx).Model(&models.ArbitrageSpread{})
 
@@ -58,6 +62,7 @@ func (r *GormArbitrageSpreadRepository) Update(ctx context.Context, spread *mode
 	return tx.Updates(spread).Error
 }
 
+// FindAll finds all arbitrage spreads in the repository based on the provided filter.
 func (r *GormArbitrageSpreadRepository) FindAll(
 	ctx context.Context,
 	f FindFilter,

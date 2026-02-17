@@ -1,7 +1,6 @@
 package arbitragebot
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/lucrumx/bot/internal/config"
@@ -16,10 +15,11 @@ type PricePoint struct {
 
 const minStepChangeToUpdate = 0.5
 
-type ActiveSpreadState struct {
+type activeSpreadState struct {
 	maxSpreadPercent float64
 }
 
+// SpreadEvent represents an arbitrage spread event.
 type SpreadEvent struct {
 	Status models.ArbitrageSpreadStatus
 
@@ -40,7 +40,7 @@ type SpreadDetector struct {
 	minSpreadPercent      float64                       // Minimal spread percent
 	maxAgeMs              int64                         // Max age of price in milliseconds
 	nowFn                 func() time.Time              // Function to get current time (for testing)
-	activeSpreads         map[string]*ActiveSpreadState // current active spreads
+	activeSpreads         map[string]*activeSpreadState // current active spreads
 	percentForCloseSpread float64                       // Spread percent for close signal
 }
 
@@ -50,7 +50,7 @@ func NewSpreadDetector(cfg *config.Config) *SpreadDetector {
 		minSpreadPercent:      cfg.Exchange.ArbitrageBot.MinSpreadPercent,
 		maxAgeMs:              cfg.Exchange.ArbitrageBot.MaxAgeMs,
 		nowFn:                 time.Now,
-		activeSpreads:         make(map[string]*ActiveSpreadState),
+		activeSpreads:         make(map[string]*activeSpreadState),
 		percentForCloseSpread: cfg.Exchange.ArbitrageBot.PercentForCloseSpread,
 	}
 }
@@ -92,8 +92,6 @@ func (d *SpreadDetector) Detect(symbol string, pricesByExchange map[string]Price
 
 			spreadKey = getSpreadKey(symbol, buyExchange, sellExchange)
 
-fmt.Printf("spreadKey: %s\n", spreadKey)
-
 			// TODO сейчас порог это gross. Добавить расчет net порога с учетом sell fee, buy fee,
 			// TODO какое-нибудь проскальзываение ...
 			spreadPercent := (sellPrice.Price - buyPrice.Price) / buyPrice.Price * 100
@@ -104,7 +102,7 @@ fmt.Printf("spreadKey: %s\n", spreadKey)
 				continue
 			} else if !ok && spreadPercent >= d.minSpreadPercent {
 				// New spread
-				d.activeSpreads[spreadKey] = &ActiveSpreadState{
+				d.activeSpreads[spreadKey] = &activeSpreadState{
 					maxSpreadPercent: spreadPercent,
 				}
 				spreadEvents = append(spreadEvents, &SpreadEvent{
@@ -125,8 +123,8 @@ fmt.Printf("spreadKey: %s\n", spreadKey)
 					Symbol:           symbol,
 					BuyOnExchange:    buyExchange,
 					SellOnExchange:   sellExchange,
-					BuyPrice:          buyPrice.Price,
-					SellPrice:         sellPrice.Price,
+					BuyPrice:         buyPrice.Price,
+					SellPrice:        sellPrice.Price,
 					MaxSpreadPercent: spreadPercent,
 				})
 			} else if ok && spreadPercent <= d.percentForCloseSpread {

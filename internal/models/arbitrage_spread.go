@@ -12,9 +12,12 @@ import (
 type ArbitrageSpreadStatus string
 
 const (
-	ArbitrageSpreadOpened  ArbitrageSpreadStatus = "OPENED"
-	ArbitrageSpreadClosed  ArbitrageSpreadStatus = "CLOSED"
-	ArbitrageSpreadUpdated ArbitrageSpreadStatus = "UPDATED" // опционально
+	// ArbitrageSpreadOpened represents an opened arbitrage spread.
+	ArbitrageSpreadOpened ArbitrageSpreadStatus = "OPENED"
+	// ArbitrageSpreadClosed represents a closed arbitrage spread.
+	ArbitrageSpreadClosed ArbitrageSpreadStatus = "CLOSED"
+	// ArbitrageSpreadUpdated represents an updated arbitrage spread.
+	ArbitrageSpreadUpdated ArbitrageSpreadStatus = "UPDATED"
 )
 
 // ArbitrageSpread represents a spread between two exchanges.

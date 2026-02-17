@@ -10,8 +10,6 @@ import (
 	"github.com/lucrumx/bot/internal/models"
 )
 
-const cooldown = 30 * time.Minute
-
 func getConfig() *config.Config {
 	return &config.Config{
 		Exchange: config.ExchangeConfig{
@@ -66,13 +64,13 @@ func TestSpreadDetector_TestUpdateSpreadEvent(t *testing.T) {
 	})
 	expectedSpreadEvent := []*SpreadEvent{
 		{
-			Status:            models.ArbitrageSpreadUpdated,
-			Symbol:            "BTCUSDT",
-			BuyOnExchange:     "ByBit",
-			SellOnExchange:    "BingX",
-			BuyPrice:          100,
-			SellPrice:         105,
-			MaxSpreadPercent:  5.0,
+			Status:           models.ArbitrageSpreadUpdated,
+			Symbol:           "BTCUSDT",
+			BuyOnExchange:    "ByBit",
+			SellOnExchange:   "BingX",
+			BuyPrice:         100,
+			SellPrice:        105,
+			MaxSpreadPercent: 5.0,
 		},
 	}
 
@@ -95,10 +93,10 @@ func TestSpreadDetector_TestCloseSpreadEvent(t *testing.T) {
 	})
 	expectedSpreadEvent := []*SpreadEvent{
 		{
-			Status:            models.ArbitrageSpreadClosed,
-			Symbol:            "BTCUSDT",
-			BuyOnExchange:     "ByBit",
-			SellOnExchange:    "BingX",
+			Status:         models.ArbitrageSpreadClosed,
+			Symbol:         "BTCUSDT",
+			BuyOnExchange:  "ByBit",
+			SellOnExchange: "BingX",
 		},
 	}
 
