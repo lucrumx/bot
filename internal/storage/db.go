@@ -2,15 +2,13 @@
 package storage
 
 import (
-	"github.com/rs/zerolog/log"
-
 	"fmt"
 
+	"github.com/rs/zerolog/log"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 
 	"github.com/lucrumx/bot/internal/config"
-
 	"github.com/lucrumx/bot/internal/models"
 )
 
@@ -33,8 +31,17 @@ func InitDB(cfg *config.Config) *gorm.DB {
 		)
 	}
 
-	if err := db.AutoMigrate(&models.User{}); err != nil {
-		log.Fatal().Err(err).Msg("Failed to migrate database schema")
+	modelsToMigrate := []interface{}{
+		&models.User{},
+		&models.ArbitrageSpread{},
+	}
+
+	for _, m := range modelsToMigrate {
+		if err := db.AutoMigrate(m); err != nil {
+			log.Fatal().
+				Err(err).
+				Msgf("Failed to migrate database schema for %T.", m)
+		}
 	}
 
 	return db

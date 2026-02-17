@@ -36,7 +36,7 @@ exchange:
   arbitration_bot:
     max_age_ms: 60000
     min_spread_percent: 3
-    cooldown_signal: 30m
+    percent_for_close_spread: 0.1
 
 notifications:
   telegram:

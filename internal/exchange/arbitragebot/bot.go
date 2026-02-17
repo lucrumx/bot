@@ -5,35 +5,41 @@ import (
 	"context"
 	"fmt"
 	"math"
-	"strconv"
 	"sync/atomic"
 	"time"
 
 	"github.com/rs/zerolog"
 
+	"github.com/lucrumx/bot/internal/notifier"
+
 	"github.com/lucrumx/bot/internal/config"
 
 	"github.com/lucrumx/bot/internal/exchange"
-	"github.com/lucrumx/bot/internal/notifier"
 )
 
 // ArbitrageBot represents a bot engine.
 type ArbitrageBot struct {
-	logger   zerolog.Logger
-	notifier notifier.Notifier
-	clients  []exchange.Provider
+	logger  zerolog.Logger
+	clients []exchange.Provider
 	// executor *ExecutionEngine order processing
-	cfg        *config.Config
-	tradeCount int64
+	cfg           *config.Config
+	tradeCount    int64
+	signalHandler *signalHandler
 }
 
 // NewBot creates a new Bot (constructor).
-func NewBot(client []exchange.Provider, notif notifier.Notifier, logger zerolog.Logger, cfg *config.Config) *ArbitrageBot {
+func NewBot(
+	clients []exchange.Provider,
+	logger zerolog.Logger,
+	cfg *config.Config,
+	notify notifier.Notifier,
+	arbitrageSpreadRepo ArbitrageSpreadRepository,
+) *ArbitrageBot {
 	return &ArbitrageBot{
-		logger:   logger,
-		notifier: notif,
-		clients:  client,
-		cfg:      cfg,
+		logger:        logger,
+		clients:       clients,
+		cfg:           cfg,
+		signalHandler: newSignalHandler(notify, logger, arbitrageSpreadRepo),
 	}
 }
 
@@ -106,6 +112,7 @@ func (a *ArbitrageBot) Run(ctx context.Context) error {
 	tradeEventsCh := make(chan PriceChangeEvent, 2000)
 	errCh := make(chan error, len(a.clients))
 
+	go a.signalHandler.run(ctx)
 	go a.grabTrade(ctx, symbols, tradeEventsCh, errCh)
 	go a.logTradeCount(ctx)
 
@@ -128,9 +135,9 @@ func (a *ArbitrageBot) Run(ctx context.Context) error {
 				Price: event.Price,
 				TsMs:  event.TsMs,
 			}
-			spreadSignal, hasSpread := spreadDetector.Detect(event.Symbol, prices[event.Symbol])
-			if hasSpread {
-				a.handleSignal(spreadSignal)
+			spreadEvents := spreadDetector.Detect(event.Symbol, prices[event.Symbol])
+			if spreadEvents != nil {
+				a.signalHandler.handleSignal(spreadEvents)
 			}
 		}
 	}
@@ -231,36 +238,6 @@ func checkUniqClient(clients []exchange.Provider) (bool, string, string) {
 	}
 
 	return true, "", names
-}
-
-func (a *ArbitrageBot) handleSignal(spread *SpreadSignal) {
-	spreadStr := strconv.FormatFloat(spread.SpreadPercent, 'f', 2, 64)
-
-	a.logger.Warn().
-		Str("pair", spread.Symbol).
-		Str("spread", spreadStr).
-		Str("buy on", spread.BuyOnExchange).
-		Str("sell on", spread.SellOnExchange).
-		Msg("🔥 SPREAD DETECTED")
-
-	msg := fmt.Sprintf(
-		"<b>🔔 ARBITRAGE: Ticker - %s</b>\n\n"+
-			"Spread: <code>%s%%</code>\n\n"+
-			"🟢 Buy:  %s - <b>%.4f</b>\n"+
-			"🔴 Sell: %s - <b>%.4f</b>",
-		spread.Symbol,
-		spreadStr,
-		spread.BuyOnExchange, spread.BuyPrice,
-		spread.SellOnExchange, spread.SellPrice,
-	)
-
-	go func() {
-		if err := a.notifier.Send(msg); err != nil {
-			a.logger.Warn().Err(err).Msg("failed to send telegram notification")
-		}
-	}()
-
-	// a.executor.Trade(ctx, spread)
 }
 
 func (a *ArbitrageBot) logTradeCount(ctx context.Context) {
