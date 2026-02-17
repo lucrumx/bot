@@ -1,6 +1,7 @@
 package arbitragebot
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/lucrumx/bot/internal/config"
@@ -91,6 +92,8 @@ func (d *SpreadDetector) Detect(symbol string, pricesByExchange map[string]Price
 
 			spreadKey = getSpreadKey(symbol, buyExchange, sellExchange)
 
+fmt.Printf("spreadKey: %s\n", spreadKey)
+
 			// TODO сейчас порог это gross. Добавить расчет net порога с учетом sell fee, buy fee,
 			// TODO какое-нибудь проскальзываение ...
 			spreadPercent := (sellPrice.Price - buyPrice.Price) / buyPrice.Price * 100
@@ -122,6 +125,8 @@ func (d *SpreadDetector) Detect(symbol string, pricesByExchange map[string]Price
 					Symbol:           symbol,
 					BuyOnExchange:    buyExchange,
 					SellOnExchange:   sellExchange,
+					BuyPrice:          buyPrice.Price,
+					SellPrice:         sellPrice.Price,
 					MaxSpreadPercent: spreadPercent,
 				})
 			} else if ok && spreadPercent <= d.percentForCloseSpread {

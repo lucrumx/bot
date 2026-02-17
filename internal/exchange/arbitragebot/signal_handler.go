@@ -119,7 +119,7 @@ func (s *signalHandler) handleNewSpreadUpdate(ctx context.Context, e *SpreadEven
 	err := s.repo.Update(ctx, &models.ArbitrageSpread{
 		Status:           models.ArbitrageSpreadUpdated,
 		MaxSpreadPercent: decimal.NewFromFloat(e.MaxSpreadPercent),
-		UpdatedAt: time.Now(),
+		UpdatedAt:        time.Now(),
 	}, FindFilter{
 		Symbol: e.Symbol,
 		BuyEx:  e.BuyOnExchange,
@@ -149,7 +149,7 @@ func (s *signalHandler) handleNewSpreadClose(ctx context.Context, e *SpreadEvent
 	}
 
 	err := s.repo.Update(ctx, &models.ArbitrageSpread{
-		Status: models.ArbitrageSpreadClosed,
+		Status:    models.ArbitrageSpreadClosed,
 		UpdatedAt: time.Now(),
 	}, FindFilter{
 		Symbol: e.Symbol,

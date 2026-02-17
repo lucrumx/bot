@@ -36,25 +36,26 @@ func (r *GormArbitrageSpreadRepository) Create(ctx context.Context, spread *mode
 	return r.db.WithContext(ctx).Create(spread).Error
 }
 
-func (r *GormArbitrageSpreadRepository) Update(ctx context.Context, spread *models.ArbitrageSpread, where FindFilter) error {
-	filters := map[string]interface{}{}
-	if where.Symbol != "" {
-		filters["symbol"] = where.Symbol
+func (r *GormArbitrageSpreadRepository) Update(ctx context.Context, spread *models.ArbitrageSpread, f FindFilter) error {
+	tx := r.db.WithContext(ctx).Model(&models.ArbitrageSpread{})
+
+	if f.Symbol != "" {
+		tx = tx.Where("symbol = ?", f.Symbol)
 	}
-	if where.BuyEx != "" {
-		filters["buy_on_exchange"] = where.BuyEx
+	if f.BuyEx != "" {
+		tx = tx.Where("buy_on_exchange = ?", f.BuyEx)
 	}
-	if where.SellEx != "" {
-		filters["sell_on_exchange"] = where.SellEx
+	if f.SellEx != "" {
+		tx = tx.Where("sell_on_exchange = ?", f.SellEx)
 	}
-	if len(where.Status) > 0 {
-		filters["status"] = gorm.Expr("IN (?)", where.Status)
+	if len(f.Status) > 0 {
+		tx = tx.Where("status IN ?", f.Status) // GORM сам поймет слайс
 	}
-	if len(where.NotInStatus) > 0 {
-		filters["status"] = gorm.Expr("NOT IN (?)", where.NotInStatus)
+	if len(f.NotInStatus) > 0 {
+		tx = tx.Where("status NOT IN ?", f.NotInStatus)
 	}
 
-	return r.db.WithContext(ctx).Model(&models.ArbitrageSpread{}).Where(filters).Updates(spread).Error
+	return tx.Updates(spread).Error
 }
 
 func (r *GormArbitrageSpreadRepository) FindAll(

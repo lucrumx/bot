@@ -29,9 +29,9 @@ type ArbitrageSpread struct {
 	BuyOnExchange  string `gorm:"index:idx_spread_symbol_exchanges"`
 	SellOnExchange string `gorm:"index:idx_spread_symbol_exchanges"`
 
-	BuyPrice         decimal.Decimal `gorm:"type:decimal(28,12);not null"`
-	SellPrice        decimal.Decimal `gorm:"type:decimal(28,12);not null"`
-	SpreadPercent    decimal.Decimal `gorm:"type:decimal(10,4);not null"`
-	MaxSpreadPercent decimal.Decimal `gorm:"type:decimal(10,4);not null"`
+	BuyPrice         decimal.Decimal       `gorm:"type:decimal(28,12);not null"`
+	SellPrice        decimal.Decimal       `gorm:"type:decimal(28,12);not null"`
+	SpreadPercent    decimal.Decimal       `gorm:"type:decimal(10,4);not null"`
+	MaxSpreadPercent decimal.Decimal       `gorm:"type:decimal(10,4);not null"`
 	Status           ArbitrageSpreadStatus `gorm:"type:varchar(20);not null"`
 }
