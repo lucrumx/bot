@@ -10,6 +10,8 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
+	"github.com/lucrumx/bot/internal/storage"
+
 	"github.com/lucrumx/bot/internal/config"
 	"github.com/lucrumx/bot/internal/exchange"
 	"github.com/lucrumx/bot/internal/exchange/client/bingx"
@@ -36,9 +38,11 @@ func main() {
 		bingXClient,
 	}
 
+	db := storage.InitDB(cfg)
 	notif := notifier.NewTelegramNotifier(cfg)
+	arbitrageSpreadRepo := arbitragebot.NewGormArbitrageSpreadRepository(db)
 
-	bot := arbitragebot.NewBot(clients, notif, logger, cfg)
+	bot := arbitragebot.NewBot(clients, logger, cfg, notif, arbitrageSpreadRepo)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()

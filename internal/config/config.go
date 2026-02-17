@@ -142,9 +142,9 @@ func loadFromEnv(cfg *Config, logger zerolog.Logger) error {
 	if err != nil {
 		return raiseErrorEnv("ARBITRATION_BOT_MIN_SPREAD_PERCENT")
 	}
-	ArbitrageBotCooldownSignal, err := time.ParseDuration(utils.GetEnv("ARBITRATION_BOT_COOLDOWN_SIGNAL", ""))
+	ArbitrageBotPercentForCloseSpread, err := strconv.ParseFloat(utils.GetEnv("ARBITRATION_BOT_PERCENT_FOR_CLOSE_SPREAD", ""), 64)
 	if err != nil {
-		return raiseErrorEnv("ARBITRATION_BOT_COOLDOWN_SIGNAL")
+		return raiseErrorEnv("ARBITRATION_BOT_PERCENT_FOR_CLOSE_SPREAD")
 	}
 
 	botConfig := BotConfig{
@@ -158,9 +158,9 @@ func loadFromEnv(cfg *Config, logger zerolog.Logger) error {
 	}
 
 	arbConfig := ArbitrageBotConfig{
-		MaxAgeMs:         ArbitrageBotMaxAgeMs,
-		MinSpreadPercent: ArbitrageBotMinSpreadPercent,
-		CooldownSignal:   ArbitrageBotCooldownSignal,
+		MaxAgeMs:              ArbitrageBotMaxAgeMs,
+		MinSpreadPercent:      ArbitrageBotMinSpreadPercent,
+		PercentForCloseSpread: ArbitrageBotPercentForCloseSpread,
 	}
 
 	cfg.Exchange = ExchangeConfig{
@@ -289,8 +289,8 @@ func validateConfig(cfg *Config) error {
 	if cfg.Exchange.ArbitrageBot.MinSpreadPercent == 0 {
 		return raiseErrorYAML("Exchange.ArbitrageBot.MinSpreadPercent")
 	}
-	if cfg.Exchange.ArbitrageBot.CooldownSignal.Seconds() == 0 {
-		return raiseErrorYAML("Exchange.ArbitrageBot.CooldownSignal wrong format, should be duration, like 30m")
+	if cfg.Exchange.ArbitrageBot.PercentForCloseSpread < 0 || cfg.Exchange.ArbitrageBot.PercentForCloseSpread > 0.5 {
+		return raiseErrorYAML("Exchange.ArbitrageBot.PercentForCloseSpread")
 	}
 
 	if cfg.Notifications.Telegram.BotToken == "" {

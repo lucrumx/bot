@@ -7,135 +7,98 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/lucrumx/bot/internal/config"
+	"github.com/lucrumx/bot/internal/models"
 )
-
-const cooldown = 30 * time.Minute
 
 func getConfig() *config.Config {
 	return &config.Config{
 		Exchange: config.ExchangeConfig{
 			ArbitrageBot: config.ArbitrageBotConfig{
-				MaxAgeMs:         60_000,
-				MinSpreadPercent: 1,
-				CooldownSignal:   cooldown,
+				MaxAgeMs:              60_000,
+				MinSpreadPercent:      1,
+				PercentForCloseSpread: 0.1,
 			},
 		},
 	}
 }
 
-func TestSpreadDetector_TestSignal(t *testing.T) {
+func TestSpreadDetector_TestOpenSpreadEvent(t *testing.T) {
 	cfg := getConfig()
 
 	sd := NewSpreadDetector(cfg)
 
-	signal, hasSignal := sd.Detect("BTCUSDT", map[string]PricePoint{
+	spreadEvent := sd.Detect("BTCUSDT", map[string]PricePoint{
 		"ByBit": {Price: 100, TsMs: time.Now().UnixMilli()},
 		"BingX": {Price: 103, TsMs: time.Now().UnixMilli()},
 	})
 
-	expectedSignal := &SpreadSignal{
-		Symbol:         "BTCUSDT",
-		BuyOnExchange:  "ByBit",
-		SellOnExchange: "BingX",
-		BuyPrice:       100,
-		SellPrice:      103,
-		SpreadPercent:  3.0,
+	expectedSpreadEvent := []*SpreadEvent{
+		{
+			Status:            models.ArbitrageSpreadOpened,
+			Symbol:            "BTCUSDT",
+			BuyOnExchange:     "ByBit",
+			SellOnExchange:    "BingX",
+			BuyPrice:          100,
+			SellPrice:         103,
+			FromSpreadPercent: 3.0,
+			MaxSpreadPercent:  3.0,
+		},
 	}
 
-	assert.Equal(t, true, hasSignal)
-	assert.Equal(t, expectedSignal, signal)
+	assert.Equal(t, expectedSpreadEvent, spreadEvent)
 }
 
-func TestSpreadDetector_TestOldTradeCase(t *testing.T) {
-	const symbol = "BTCUSDT"
-	now := time.Now()
+func TestSpreadDetector_TestUpdateSpreadEvent(t *testing.T) {
 	cfg := getConfig()
-
-	testCases := []struct {
-		name         string
-		prices       map[string]PricePoint
-		expectSignal bool
-		now          time.Time
-	}{
-		{
-			name: "Test case 1: no cooldown",
-			prices: map[string]PricePoint{
-				"ByBit": {Price: 100, TsMs: time.Now().UnixMilli()},
-				"BingX": {Price: 101, TsMs: time.Now().UnixMilli()},
-			},
-			now:          now,
-			expectSignal: true,
-		},
-		{
-			name: "Test case 2: old trade",
-			prices: map[string]PricePoint{
-				"ByBit": {Price: 100, TsMs: now.Add(-time.Duration(cfg.Exchange.ArbitrageBot.MaxAgeMs+1) * time.Millisecond).UnixMilli()},
-				"BingX": {Price: 101, TsMs: now.Add(-time.Duration(cfg.Exchange.ArbitrageBot.MaxAgeMs+1) * time.Millisecond).UnixMilli()},
-			},
-			now:          now,
-			expectSignal: false,
-		},
-	}
 
 	sd := NewSpreadDetector(cfg)
 
-	for _, tc := range testCases {
-		sd.nowFn = func() time.Time {
-			return tc.now
-		}
-		_, hasSignal := sd.Detect(symbol, tc.prices)
+	_ = sd.Detect("BTCUSDT", map[string]PricePoint{
+		"ByBit": {Price: 100, TsMs: time.Now().UnixMilli()},
+		"BingX": {Price: 103, TsMs: time.Now().UnixMilli()},
+	})
 
-		assert.Equal(t, tc.expectSignal, hasSignal, tc.name)
+	updatedEvent := sd.Detect("BTCUSDT", map[string]PricePoint{
+		"ByBit": {Price: 100, TsMs: time.Now().UnixMilli()},
+		"BingX": {Price: 105, TsMs: time.Now().UnixMilli()},
+	})
+	expectedSpreadEvent := []*SpreadEvent{
+		{
+			Status:           models.ArbitrageSpreadUpdated,
+			Symbol:           "BTCUSDT",
+			BuyOnExchange:    "ByBit",
+			SellOnExchange:   "BingX",
+			BuyPrice:         100,
+			SellPrice:        105,
+			MaxSpreadPercent: 5.0,
+		},
 	}
+
+	assert.Equal(t, expectedSpreadEvent, updatedEvent)
 }
 
-func TestSpreadDetector_TestCooldown(t *testing.T) {
-	const symbol = "BTCUSDT"
-	now := time.Now()
+func TestSpreadDetector_TestCloseSpreadEvent(t *testing.T) {
+	cfg := getConfig()
 
-	testCases := []struct {
-		name         string
-		prices       map[string]PricePoint
-		expectSignal bool
-		now          time.Time
-	}{
+	sd := NewSpreadDetector(cfg)
+
+	_ = sd.Detect("BTCUSDT", map[string]PricePoint{
+		"ByBit": {Price: 100, TsMs: time.Now().UnixMilli()},
+		"BingX": {Price: 103, TsMs: time.Now().UnixMilli()},
+	})
+
+	updatedEvent := sd.Detect("BTCUSDT", map[string]PricePoint{
+		"ByBit": {Price: 100, TsMs: time.Now().UnixMilli()},
+		"BingX": {Price: 100.001, TsMs: time.Now().UnixMilli()},
+	})
+	expectedSpreadEvent := []*SpreadEvent{
 		{
-			name: "Test case 1: no cooldown",
-			prices: map[string]PricePoint{
-				"ByBit": {Price: 100, TsMs: time.Now().UnixMilli()},
-				"BingX": {Price: 101, TsMs: time.Now().UnixMilli()},
-			},
-			now:          now,
-			expectSignal: true,
-		},
-		{
-			name: "Test case 2: cooldown exists",
-			prices: map[string]PricePoint{
-				"ByBit": {Price: 100, TsMs: time.Now().UnixMilli()},
-				"BingX": {Price: 101, TsMs: time.Now().UnixMilli()},
-			},
-			now:          now,
-			expectSignal: false,
-		},
-		{
-			name: "Test case 3: cooldown expired",
-			prices: map[string]PricePoint{
-				"ByBit": {Price: 100, TsMs: time.Now().Add(cooldown + time.Duration(1*time.Minute)).UnixMilli()},
-				"BingX": {Price: 101, TsMs: time.Now().Add(cooldown + time.Duration(1*time.Minute)).UnixMilli()},
-			},
-			now:          now.Add(cooldown + 1*time.Minute),
-			expectSignal: true,
+			Status:         models.ArbitrageSpreadClosed,
+			Symbol:         "BTCUSDT",
+			BuyOnExchange:  "ByBit",
+			SellOnExchange: "BingX",
 		},
 	}
 
-	sd := NewSpreadDetector(getConfig())
-
-	for _, tc := range testCases {
-		sd.nowFn = func() time.Time {
-			return tc.now
-		}
-		_, hasSignal := sd.Detect(symbol, tc.prices)
-
-		assert.Equal(t, tc.expectSignal, hasSignal, tc.name)
-	}
+	assert.Equal(t, expectedSpreadEvent, updatedEvent)
 }

@@ -37,9 +37,9 @@ type BotConfig struct {
 
 // ArbitrageBotConfig contains configuration for arbitration bot.
 type ArbitrageBotConfig struct {
-	MaxAgeMs         int64         `yaml:"max_age_ms"`
-	MinSpreadPercent float64       `yaml:"min_spread_percent"`
-	CooldownSignal   time.Duration `yaml:"cooldown_signal"`
+	MaxAgeMs              int64   `yaml:"max_age_ms"`
+	MinSpreadPercent      float64 `yaml:"min_spread_percent"`
+	PercentForCloseSpread float64 `yaml:"percent_for_close_spread"`
 }
 
 // ExchangeConfig contains a configuration for an exchange.
