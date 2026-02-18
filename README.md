@@ -19,6 +19,13 @@ Real-time spread monitoring between different exchanges.
 - **Normalization**: Standardizes disparate symbol formats (e.g., `BTC-USDT` vs `BTCUSDT`).
 - **Spread Detection**: Calculates clean (Net) spreads with stale price protection (MaxAge) and signal throttling.
 
+## 📊 API & Web Interface
+
+The system includes a centralized API and an embedded web interface for monitoring and management.
+- **Backend API (`cmd/api`)**: Provides REST endpoints for data retrieval and future control. All API requests are prefixed with `/api/`.
+- **Embedded Frontend**: A Single Page Application (SPA) built with **Nuxt.js v4 (Vue 3)**, compiled to static assets, and embedded directly into the Go binary using `go:embed`.
+- **Routing**: Requests to `/api/*` are handled by the Go backend. All other routes are served by the embedded Nuxt.js SPA, allowing client-side routing.
+
 ## 🚀 Core Features
 
 - **Multi-Exchange Support**: Native integrations for **Bybit (V5)** and **BingX (V2 Swap)** via optimized WebSocket clients.
@@ -29,6 +36,7 @@ Real-time spread monitoring between different exchanges.
 ## 🛠 Tech Stack
 
 - **Language**: Go 1.24.
+- **Frontend**: Nuxt.js v3 (Vue 3) + Tailwind CSS + DaisyUI.
 - **Transport**: REST & WebSocket API (Bybit, BingX).
 - **Notifications**: Telegram Bot API.
 - **Logging**: `zerolog` (structured JSON logging).
@@ -42,13 +50,15 @@ The engine is built for dense data streams with low latency. Values below are cu
 
 ## 🏗 Project Structure
 
+- `cmd/api/`: Entry point for the combined API and Web Interface.
 - `cmd/pumpbot/`: Pump Detector entry point.
 - `cmd/arbitragebot/`: Arbitrage Bot entry point.
 - `internal/exchange/`: 
     - `client/`: Bybit and BingX exchange adapters.
     - `pumpbot/`: Core logic for impulse detection.
-    - `arbitragebot/`: Core logic for spread monitoring.
+    - `arbitragebot/`: Core logic for spread monitoring and API handlers.
     - `ws_manager.go`: Unified WebSocket connection manager.
+- `internal/ui/`: Embedded Nuxt.js frontend assets and serving logic.
 - `internal/notifier/`: Telegram notification system.
 - `internal/config/`: Configuration management (YAML + ENV).
 
@@ -72,6 +82,14 @@ The system uses a flexible configuration approach with the following priority:
    git clone https://github.com/lucrumx/bot.git
    cp .env.dist .env
    ```
-2. **Install Dependencies**: `go mod download`
-3. **Run Arbitrage Bot**: `go run cmd/arbitragebot/main.go`
-4. **Run Pump Bot**: `go run cmd/pumpbot/main.go`
+2. **Install Go Dependencies**: `go mod download`
+3. **Build and Embed Frontend**:
+   ```bash
+   cd internal/ui/frontend
+   npm install
+   npm run generate
+   cd ../../.. # Go back to project root
+   ```
+4. **Run API & Web Interface**: `go run cmd/api/main.go`
+5. **Run Arbitrage Bot**: `go run cmd/arbitragebot/main.go`
+6. **Run Pump Bot**: `go run cmd/pumpbot/main.go`
