@@ -36,7 +36,7 @@ The system includes a centralized API and an embedded web interface for monitori
 ## 🛠 Tech Stack
 
 - **Language**: Go 1.24.
-- **Frontend**: Nuxt.js v3 (Vue 3) + Tailwind CSS + DaisyUI.
+- **Frontend**: Nuxt.js v4 (Vue 3) + Tailwind CSS + DaisyUI.
 - **Transport**: REST & WebSocket API (Bybit, BingX).
 - **Notifications**: Telegram Bot API.
 - **Logging**: `zerolog` (structured JSON logging).
