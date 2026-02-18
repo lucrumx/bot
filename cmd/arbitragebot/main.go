@@ -40,7 +40,7 @@ func main() {
 
 	db := storage.InitDB(cfg)
 	notif := notifier.NewTelegramNotifier(cfg)
-	arbitrageSpreadRepo := arbitragebot.NewGormArbitrageSpreadRepository(db)
+	arbitrageSpreadRepo := arbitragebot.NewRepository(db)
 
 	bot := arbitragebot.NewBot(clients, logger, cfg, notif, arbitrageSpreadRepo)
 

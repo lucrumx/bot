@@ -24,23 +24,23 @@ type FindFilter struct {
 	NotInStatus []models.ArbitrageSpreadStatus
 }
 
-// GormArbitrageSpreadRepository is a GORM implementation of ArbitrageSpreadRepository.
-type GormArbitrageSpreadRepository struct {
+// Repository is a GORM implementation of ArbitrageSpreadRepository.
+type Repository struct {
 	db *gorm.DB
 }
 
-// NewGormArbitrageSpreadRepository creates a new GormArbitrageSpreadRepository.
-func NewGormArbitrageSpreadRepository(db *gorm.DB) *GormArbitrageSpreadRepository {
-	return &GormArbitrageSpreadRepository{db: db}
+// NewRepository creates a new GormArbitrageSpreadRepository.
+func NewRepository(db *gorm.DB) *Repository {
+	return &Repository{db: db}
 }
 
 // Create creates a new arbitrage spread in the repository.
-func (r *GormArbitrageSpreadRepository) Create(ctx context.Context, spread *models.ArbitrageSpread) error {
+func (r *Repository) Create(ctx context.Context, spread *models.ArbitrageSpread) error {
 	return r.db.WithContext(ctx).Create(spread).Error
 }
 
 // Update updates an existing arbitrage spread in the repository based on the provided filter.
-func (r *GormArbitrageSpreadRepository) Update(ctx context.Context, spread *models.ArbitrageSpread, f FindFilter) error {
+func (r *Repository) Update(ctx context.Context, spread *models.ArbitrageSpread, f FindFilter) error {
 	tx := r.db.WithContext(ctx).Model(&models.ArbitrageSpread{})
 
 	if f.Symbol != "" {
@@ -63,7 +63,7 @@ func (r *GormArbitrageSpreadRepository) Update(ctx context.Context, spread *mode
 }
 
 // FindAll finds all arbitrage spreads in the repository based on the provided filter.
-func (r *GormArbitrageSpreadRepository) FindAll(
+func (r *Repository) FindAll(
 	ctx context.Context,
 	f FindFilter,
 ) ([]*models.ArbitrageSpread, error) {

@@ -36,11 +36,12 @@ func (s *signalHandler) run(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case event := <-s.signalCh:
-			if event.Status == models.ArbitrageSpreadOpened {
+			switch event.Status {
+			case models.ArbitrageSpreadOpened:
 				s.handleNewSpreadEvent(ctx, event)
-			} else if event.Status == models.ArbitrageSpreadUpdated {
+			case models.ArbitrageSpreadUpdated:
 				s.handleNewSpreadUpdate(ctx, event)
-			} else if event.Status == models.ArbitrageSpreadClosed {
+			case models.ArbitrageSpreadClosed:
 				s.handleNewSpreadClose(ctx, event)
 			}
 		}
