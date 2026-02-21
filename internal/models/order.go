@@ -11,20 +11,20 @@ import (
 type OrderSide string
 
 const (
-	// Buy represents the buy side of an order.
-	Buy OrderSide = "BUY"
-	// Sell represents the sell side of an order.
-	Sell OrderSide = "SELL"
+	// OrderSideBuy represents the buy side of an order.
+	OrderSideBuy OrderSide = "BUY"
+	// OrderSideSell represents the sell side of an order.
+	OrderSideSell OrderSide = "SELL"
 )
 
-// OrderType represents the type of an order, either limit or market
+// OrderType represents the type of order, either limit or market
 type OrderType string
 
 const (
-	// Limit represents a limit order.
-	Limit OrderType = "LIMIT"
-	// Market represents a market order.
-	Market OrderType = "MARKET"
+	// OrderTypeLimit represents a limit order.
+	OrderTypeLimit OrderType = "LIMIT"
+	// OrderTypeMarket represents a market order.
+	OrderTypeMarket OrderType = "MARKET"
 )
 
 // OrderStatus represents the status of an order, such as "NEW", "PARTIALLY_FILLED", "FILLED", etc.
@@ -32,29 +32,28 @@ type OrderStatus string
 
 const (
 
-	// New represents an order status indicating that the order has been newly created and not yet processed.
-	New OrderStatus = "NEW"
-	// PartiallyFilled represents an order status indicating that the order has been partially filled.
-	PartiallyFilled OrderStatus = "PARTIALLY_FILLED"
-	// Filled represents an order status indicating that the order has been fully filled (executed).
-	Filled OrderStatus = "FILLED"
-	// Canceled represents an order status indicating that the order has been canceled.
-	Canceled OrderStatus = "CANCELED"
-	// Pending represents an order status indicating that the order is pending (not yet processed).
-	Pending OrderStatus = "PENDING"
-	// Rejected represents an order status indicating that the order has been rejected.
-	Rejected OrderStatus = "REJECTED"
-	// Expired represents an order status indicating that the order has expired.
-	Expired OrderStatus = "EXPIRED"
+	// OrderStatusNew represents an order status indicating that the order has been newly created and not yet processed.
+	OrderStatusNew OrderStatus = "NEW"
+	// OrderStatusPartiallyFilled represents an order status indicating that the order has been partially filled.
+	OrderStatusPartiallyFilled OrderStatus = "PARTIALLY_FILLED"
+	// OrderStatusFilled represents an order status indicating that the order has been fully filled (executed).
+	OrderStatusFilled OrderStatus = "FILLED"
+	// OrderStatusCanceled represents an order status indicating that the order has been canceled.
+	OrderStatusCanceled OrderStatus = "CANCELED"
+	// OrderStatusPending represents an order status indicating that the order is pending (not yet processed).
+	OrderStatusPending OrderStatus = "PENDING"
+	// OrderStatusRejected represents an order status indicating that the order has been rejected.
+	OrderStatusRejected OrderStatus = "REJECTED"
+	// OrderStatusExpired represents an order status indicating that the order has expired.
+	OrderStatusExpired OrderStatus = "EXPIRED"
 )
 
 // Order represents an order placed on an exchange.
 type Order struct {
 	ID               uuid.UUID       `gorm:"type:uuid;primary_key;default:uuidv7()"`
-	OrderID          string          `gorm:"type:text;not null"` // Exchange assigned order id
+	ExchangeOrderID  string          `gorm:"type:text;"` // Exchange assigned order id
 	ExchangeName     string          `gorm:"type:text;not null"`
 	Symbol           string          `gorm:"type:text;not null"`
-	ClientOrderID    uuid.UUID       `gorm:"type:uuid;default:uuidv7();index:idx_order_request_client_order_id"`
 	Side             OrderSide       `gorm:"type:text;not null"`
 	Type             OrderType       `gorm:"type:text;not null"`
 	Price            decimal.Decimal `gorm:"type:decimal(28,12);"` // Price for limit order

@@ -1,8 +1,12 @@
 package bybit
 
-import "github.com/lucrumx/bot/internal/models"
+import (
+	"context"
+
+	"github.com/lucrumx/bot/internal/models"
+)
 
 // CreateOrder creates an order on the exchange.
-func (c *Client) CreateOrder(ctx, req models.Order) (*models.Order, error) {
+func (c *Client) CreateOrder(ctx context.Context, order models.Order) (*models.Order, error) {
 	return nil, nil
 }

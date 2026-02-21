@@ -18,3 +18,13 @@ type Balance struct {
 	CreatedAt    time.Time       `gorm:"type:timestampz;default:now()"`
 	UpdatedAt    time.Time       `gorm:"type:timestampz;"`
 }
+
+/** маппинг для bingx
+r := models.Balance{
+			ExchangeName: exchangeName,
+			Asset:        data.Asset,
+			Free:         decimal.NewFromFloat(float64(data.AvailableMargin)),
+			Locked:       decimal.NewFromFloat(float64(data.FreezedMargin)),
+			Total:        decimal.NewFromFloat(float64(data.Equity)),
+		}
+*/

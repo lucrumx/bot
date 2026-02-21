@@ -18,6 +18,7 @@ import (
 
 	"github.com/lucrumx/bot/internal/config"
 	"github.com/lucrumx/bot/internal/exchange"
+	"github.com/lucrumx/bot/internal/exchange/client/bingx/dtos"
 )
 
 // Metrics holds metrics related to websocket client operations.
@@ -152,7 +153,7 @@ func (c *wsClient) readMessage(ctx context.Context, wsConn *websocket.Conn, outC
 				continue
 			}
 
-			var jsonMessage WsTradeMessageDTO
+			var jsonMessage dtos.WsTradeMessageDTO
 			if err := json.Unmarshal([]byte(message), &jsonMessage); err != nil {
 				log.Warn().Err(err).Msgf("Failed to unmarshal message from BingX websocket message: %v", message)
 			}
