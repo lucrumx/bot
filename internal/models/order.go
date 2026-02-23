@@ -48,12 +48,23 @@ const (
 	OrderStatusExpired OrderStatus = "EXPIRED"
 )
 
+// OrderMarket represents the market type of an order, either spot or linear.
+type OrderMarket string
+
+const (
+	// OrderMarketSpot represents a spot market type for an order.
+	OrderMarketSpot OrderMarket = "SPOT"
+	// OrderMarketLinear represents a linear (perpetual futures) market type for an order.
+	OrderMarketLinear OrderMarket = "LINEAR"
+)
+
 // Order represents an order placed on an exchange.
 type Order struct {
 	ID               uuid.UUID       `gorm:"type:uuid;primary_key;default:uuidv7()"`
 	ExchangeOrderID  string          `gorm:"type:text;"` // Exchange assigned order id
 	ExchangeName     string          `gorm:"type:text;not null"`
 	Symbol           string          `gorm:"type:text;not null"`
+	Market           OrderMarket     `gorm:"type:text;not null"`
 	Side             OrderSide       `gorm:"type:text;not null"`
 	Type             OrderType       `gorm:"type:text;not null"`
 	Price            decimal.Decimal `gorm:"type:decimal(28,12);"` // Price for limit order
@@ -61,6 +72,8 @@ type Order struct {
 	AvgPrice         decimal.Decimal `gorm:"type:decimal(28,12);"` // Average price of the market order
 	ExecutedQuantity decimal.Decimal `gorm:"type:decimal(28,12);"` // executed quantity for limit order
 	Commission       decimal.Decimal `gorm:"type:decimal(28,12);"` // commission for the order
+	HasErrors        bool            `gorm:"type:boolean;default:false"`
+	RawResponse      string          `gorm:"type:text;"`
 	CreatedAt        time.Time       `gorm:"type:timestamptz;default:now()"`
 	UpdatedAt        time.Time       `gorm:"type:timestamptz;"`
 }

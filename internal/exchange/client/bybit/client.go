@@ -15,6 +15,7 @@ type Client struct {
 	baseURL      string
 	http         *http.Client
 	wsManager    *exchange.WSManager
+	cfg          *config.Config
 }
 
 // NewByBitClient creates a new ByBitClient.
@@ -23,6 +24,7 @@ func NewByBitClient(cfg *config.Config) *Client {
 		exchangeName: "ByBit",
 		baseURL:      cfg.Exchange.ByBit.BaseURL,
 		http:         &http.Client{},
+		cfg:          cfg,
 		wsManager: exchange.NewWSManager(cfg, func(c *config.Config) exchange.WsClient {
 			return newWsClient(c)
 		}),

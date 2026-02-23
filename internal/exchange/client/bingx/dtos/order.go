@@ -30,7 +30,7 @@ const (
 	OrderTypeMarket OrderType = "MARKET"
 )
 
-// OrderDTO represents an order.
+// OrderDTO represents an order in response.
 type OrderDTO struct {
 	Symbol  string `json:"symbol"`
 	OrderID int64  `json:"orderId"`

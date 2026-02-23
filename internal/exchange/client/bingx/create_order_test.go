@@ -65,10 +65,9 @@ func Test_CreateOrder_Integration(t *testing.T) {
 		Quantity: decimal.NewFromInt(1),
 	}
 
-	res, err := bingx.CreateOrder(ctx, order)
+	err := bingx.CreateOrder(ctx, order)
 
 	assert.NoError(t, err)
-	assert.NotNil(t, res)
 }
 
 func Test_CreateOrder_ValidateBeforeCreate(t *testing.T) {
