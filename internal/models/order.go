@@ -61,6 +61,6 @@ type Order struct {
 	AvgPrice         decimal.Decimal `gorm:"type:decimal(28,12);"` // Average price of the market order
 	ExecutedQuantity decimal.Decimal `gorm:"type:decimal(28,12);"` // executed quantity for limit order
 	Commission       decimal.Decimal `gorm:"type:decimal(28,12);"` // commission for the order
-	CreatedAt        time.Time       `gorm:"type:timestampz;default:now()"`
-	UpdatedAt        time.Time       `gorm:"type:timestampz;"`
+	CreatedAt        time.Time       `gorm:"type:timestamptz;default:now()"`
+	UpdatedAt        time.Time       `gorm:"type:timestamptz;"`
 }

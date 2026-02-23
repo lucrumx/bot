@@ -15,8 +15,8 @@ type Balance struct {
 	Free         decimal.Decimal `gorm:"type:decimal(28,12);"`
 	Locked       decimal.Decimal `gorm:"type:decimal(28,12);"`
 	Total        decimal.Decimal `gorm:"type:decimal(28,12);"`
-	CreatedAt    time.Time       `gorm:"type:timestampz;default:now()"`
-	UpdatedAt    time.Time       `gorm:"type:timestampz;"`
+	CreatedAt    time.Time       `gorm:"type:timestamptz;default:now()"`
+	UpdatedAt    time.Time       `gorm:"type:timestamptz;"`
 }
 
 /** маппинг для bingx
