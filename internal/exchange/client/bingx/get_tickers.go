@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/lucrumx/bot/internal/exchange"
+	"github.com/lucrumx/bot/internal/exchange/client/bingx/dtos"
 )
 
 // GetTickers returns the latest ticker data for the specified symbol.
@@ -40,7 +41,6 @@ func (c *Client) GetTickers(ctx context.Context, symbols []string, category exch
 			// BingX API requires the symbol to be in the format "BTC-USDT"
 			symbol = strings.TrimSuffix(symbol, "USDT") + "-USDT"
 		}
-		fmt.Println("-----------------------: " + symbol)
 	}
 
 	queryStr := getSortedQuery(query, time.Now().UnixMilli(), false)
@@ -49,7 +49,7 @@ func (c *Client) GetTickers(ctx context.Context, symbols []string, category exch
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("BingX client http request failed: %w", err)
+		return nil, fmt.Errorf("BingX client http get tickers request failed: %w", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 
@@ -57,15 +57,15 @@ func (c *Client) GetTickers(ctx context.Context, symbols []string, category exch
 		return nil, fmt.Errorf("BingX client unexpected http while getting tickers status code: %d", resp.StatusCode)
 	}
 
-	var raw ResponseGetTickerDTO
+	var raw dtos.ResponseGetTickerDTO
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("BingX client failed to read response body: %w", err)
+		return nil, fmt.Errorf("BingX client failed to read get tickers response body: %w", err)
 	}
 
 	if err := json.Unmarshal(body, &raw); err != nil {
-		return nil, fmt.Errorf("BingX client failed to unmarshal response: %w", err)
+		return nil, fmt.Errorf("BingX client failed to unmarshal get tickers response: %w", err)
 	}
 
 	if raw.Code != 0 {
@@ -76,7 +76,7 @@ func (c *Client) GetTickers(ctx context.Context, symbols []string, category exch
 	for _, dto := range raw.Data {
 		t, err := mapTicker(dto)
 		if err != nil {
-			return nil, fmt.Errorf("BingX client failed to map response: %w", err)
+			return nil, fmt.Errorf("BingX client failed to map get tickers response: %w", err)
 		}
 
 		result = append(result, t)

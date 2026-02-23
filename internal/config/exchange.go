@@ -11,10 +11,11 @@ type WsClientConfig struct {
 
 // ByBitConfig contains configuration for ByBit exchange.
 type ByBitConfig struct {
-	BaseURL   string `yaml:"base_url"`
-	WsBaseURL string `yaml:"ws_base_url"`
-	APIKey    string `yaml:"api_key"`
-	APISecret string `yaml:"api_secret"`
+	BaseURL    string `yaml:"base_url"`
+	WsBaseURL  string `yaml:"ws_base_url"`
+	APIKey     string `yaml:"api_key"`
+	APISecret  string `yaml:"api_secret"`
+	RecvWindow int64  `yaml:"recv_window"`
 }
 
 // BingXConfig contains configuration for BingX exchange.
