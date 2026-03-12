@@ -92,7 +92,7 @@ func (c *wsClient) subscribe(wsCon *websocket.Conn, symbols []string) error {
 		}
 
 		dataType := fmt.Sprintf("%s@trade", strings.Replace(symbol, "USDT", "-USDT", 1))
-		fmt.Printf("subscribing to %s\n", dataType)
+
 		payload := map[string]string{
 			"id":       id.String(),
 			"reqType":  "sub",

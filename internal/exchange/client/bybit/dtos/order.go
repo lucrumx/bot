@@ -27,6 +27,7 @@ const (
 	OrderSideSell OrderSide = "Sell"
 )
 
+// OrderType represents the type of order.
 type OrderType string
 
 const (

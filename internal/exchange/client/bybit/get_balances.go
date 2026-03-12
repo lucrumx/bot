@@ -7,6 +7,6 @@ import (
 )
 
 // GetBalances returns the balances of the user's account on the exchange.
-func (c *Client) GetBalances(ctx context.Context) ([]models.Balance, error) {
+func (c *Client) GetBalances(ctx context.Context) ([]models.Balance, error) { //nolint
 	return nil, nil
 }

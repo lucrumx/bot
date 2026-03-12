@@ -39,7 +39,7 @@ func (c *Client) GetTickers(ctx context.Context, symbols []string, category exch
 	if len(symbol) > 0 {
 		if !strings.Contains(symbol, "-") {
 			// BingX API requires the symbol to be in the format "BTC-USDT"
-			symbol = strings.TrimSuffix(symbol, "USDT") + "-USDT"
+			query["symbol"] = strings.TrimSuffix(symbol, "USDT") + "-USDT"
 		}
 	}
 
