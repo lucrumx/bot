@@ -15,6 +15,7 @@ type Client struct {
 	baseURL      string
 	http         *http.Client
 	wsManager    *exchange.WSManager
+	cfg          *config.Config
 }
 
 // NewByBitClient creates a new ByBitClient.
@@ -23,6 +24,7 @@ func NewByBitClient(cfg *config.Config) *Client {
 		exchangeName: "ByBit",
 		baseURL:      cfg.Exchange.ByBit.BaseURL,
 		http:         &http.Client{},
+		cfg:          cfg,
 		wsManager: exchange.NewWSManager(cfg, func(c *config.Config) exchange.WsClient {
 			return newWsClient(c)
 		}),
@@ -35,6 +37,6 @@ func (c *Client) GetExchangeName() string {
 }
 
 // SubscribeTrades initiates WebSocket trade subscriptions for the given symbols and streams trades to the returned channel.
-func (c *Client) SubscribeTrades(ctx context.Context, symbols []string) (<-chan exchange.Trade, error) {
-	return c.wsManager.SubscribeTrades(ctx, symbols)
+func (c *Client) SubscribeTrades(ctx context.Context, symbols []string, category exchange.Category) (<-chan exchange.Trade, error) {
+	return c.wsManager.SubscribeTrades(ctx, symbols, category)
 }

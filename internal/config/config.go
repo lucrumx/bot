@@ -84,6 +84,13 @@ func loadFromEnv(cfg *Config, logger zerolog.Logger) error {
 		WsBaseURL: utils.GetEnv("BYBIT_WS_BASE_URL", ""),
 		APIKey:    utils.GetEnv("BYBIT_API_KEY", ""),
 		APISecret: utils.GetEnv("BYBIT_API_SECRET", ""),
+		RecvWindow: func() int64 {
+			rcw, err := strconv.Atoi(utils.GetEnv("BYBIT_API_SECRET", "5000"))
+			if err != nil {
+				return 5000
+			}
+			return int64(rcw)
+		}(),
 	}
 
 	bingX := BingXConfig{
@@ -242,6 +249,9 @@ func validateConfig(cfg *Config) error {
 	}
 	if cfg.Exchange.ByBit.APISecret == "" {
 		return raiseErrorYAML("Exchange.ByBit.APISecret")
+	}
+	if cfg.Exchange.ByBit.RecvWindow == 0 {
+		cfg.Exchange.ByBit.RecvWindow = 5000
 	}
 
 	// BingX

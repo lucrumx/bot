@@ -18,6 +18,7 @@ import (
 
 	"github.com/lucrumx/bot/internal/config"
 	"github.com/lucrumx/bot/internal/exchange"
+	"github.com/lucrumx/bot/internal/exchange/client/bingx/dtos"
 )
 
 // Metrics holds metrics related to websocket client operations.
@@ -57,7 +58,11 @@ func (c *wsClient) writeControl(wsConn *websocket.Conn, messageType int, data []
 	return wsConn.WriteControl(messageType, data, deadline)
 }
 
-func (c *wsClient) Start(ctx context.Context, symbols []string, outChan chan<- exchange.Trade) error {
+func (c *wsClient) Start(ctx context.Context, symbols []string, category exchange.Category, outChan chan<- exchange.Trade) error {
+	if category != exchange.CategoryLinear {
+		return fmt.Errorf("bingx websocket supports only %s trades", exchange.CategoryLinear)
+	}
+
 	wsConn, _, err := websocket.DefaultDialer.Dial(c.cfg.Exchange.BingX.WSUrl, nil)
 	if err != nil {
 		return fmt.Errorf("failed to dial websocket: %w", err)
@@ -68,7 +73,7 @@ func (c *wsClient) Start(ctx context.Context, symbols []string, outChan chan<- e
 		return fmt.Errorf("failed to subscribe to symbols: %w", err)
 	}
 
-	go c.readMessage(ctx, wsConn, outChan)
+	go c.readMessage(ctx, wsConn, category, outChan)
 	go c.pingPongInterval(ctx, wsConn)
 	go c.logMetrics(ctx)
 	go func() {
@@ -87,6 +92,7 @@ func (c *wsClient) subscribe(wsCon *websocket.Conn, symbols []string) error {
 		}
 
 		dataType := fmt.Sprintf("%s@trade", strings.Replace(symbol, "USDT", "-USDT", 1))
+
 		payload := map[string]string{
 			"id":       id.String(),
 			"reqType":  "sub",
@@ -101,7 +107,7 @@ func (c *wsClient) subscribe(wsCon *websocket.Conn, symbols []string) error {
 	return nil
 }
 
-func (c *wsClient) readMessage(ctx context.Context, wsConn *websocket.Conn, outChan chan<- exchange.Trade) {
+func (c *wsClient) readMessage(ctx context.Context, wsConn *websocket.Conn, category exchange.Category, outChan chan<- exchange.Trade) {
 	defer func() {
 		err := wsConn.Close()
 		if err != nil && ctx.Err() == nil {
@@ -152,7 +158,7 @@ func (c *wsClient) readMessage(ctx context.Context, wsConn *websocket.Conn, outC
 				continue
 			}
 
-			var jsonMessage WsTradeMessageDTO
+			var jsonMessage dtos.WsTradeMessageDTO
 			if err := json.Unmarshal([]byte(message), &jsonMessage); err != nil {
 				log.Warn().Err(err).Msgf("Failed to unmarshal message from BingX websocket message: %v", message)
 			}
@@ -168,11 +174,12 @@ func (c *wsClient) readMessage(ctx context.Context, wsConn *websocket.Conn, outC
 				}
 
 				trade := exchange.Trade{
-					Symbol: strings.TrimSuffix(val.Symbol, "-USDT") + "USDT",
-					Ts:     val.T,
-					Price:  float64(val.Price),
-					Volume: float64(val.Volume),
-					Side:   side,
+					Symbol:   strings.TrimSuffix(val.Symbol, "-USDT") + "USDT",
+					Category: category,
+					Ts:       val.T,
+					Price:    float64(val.Price),
+					Volume:   float64(val.Volume),
+					Side:     side,
 				}
 
 				select {

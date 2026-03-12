@@ -3,6 +3,7 @@ package arbitragebot
 import (
 	"context"
 	"fmt"
+	"math"
 	"strconv"
 	"time"
 
@@ -67,12 +68,12 @@ func (s *signalHandler) handleNewSpreadEvent(ctx context.Context, e *SpreadEvent
 	msg := fmt.Sprintf(
 		"<b>🔔 ARBITRAGE: Ticker - %s</b>\n\n"+
 			"Spread: <code>%s%%</code>\n\n"+
-			"🟢 Buy:  %s - <b>%.4f</b>\n"+
-			"🔴 Sell: %s - <b>%.4f</b>",
+			"🟢 Buy:  %s - <b>%s</b>\n"+
+			"🔴 Sell: %s - <b>%s</b>",
 		e.Symbol,
 		spreadStr,
-		e.BuyOnExchange, e.BuyPrice,
-		e.SellOnExchange, e.SellPrice,
+		e.BuyOnExchange, formatPrice(e.BuyPrice),
+		e.SellOnExchange, formatPrice(e.SellPrice),
 	)
 
 	if err := s.notif.Send(msg); err != nil {
@@ -94,6 +95,21 @@ func (s *signalHandler) handleNewSpreadEvent(ctx context.Context, e *SpreadEvent
 			e.Symbol, e.BuyOnExchange, e.SellOnExchange)
 	}
 
+}
+
+func formatPrice(price float64) string {
+	switch {
+	case price == 0:
+		return "0"
+	case math.Abs(price) >= 1000:
+		return strconv.FormatFloat(price, 'f', 2, 64)
+	case math.Abs(price) >= 1:
+		return strconv.FormatFloat(price, 'f', 4, 64)
+	case math.Abs(price) >= 0.01:
+		return strconv.FormatFloat(price, 'f', 6, 64)
+	default:
+		return strconv.FormatFloat(price, 'f', 8, 64)
+	}
 }
 
 func (s *signalHandler) handleNewSpreadUpdate(ctx context.Context, e *SpreadEvent) {

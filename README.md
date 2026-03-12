@@ -19,6 +19,12 @@ Real-time spread monitoring between different exchanges.
 - **Normalization**: Standardizes disparate symbol formats (e.g., `BTC-USDT` vs `BTCUSDT`).
 - **Spread Detection**: Calculates clean (Net) spreads with stale price protection (MaxAge) and signal throttling.
 
+### 3. Manipulation Bot
+Real-time detection of spot-led volatility anomalies between spot and perpetual markets on the same exchange.
+- **Signal Model**: Compares normalized `ATR` on `spot` versus `perp` for the same symbol.
+- **Universe Selection**: Monitors only symbols where both spot and perpetual markets exist, with optional 24h turnover filters.
+- **Operational Diagnostics**: Logs symbol selection statistics and lists of `perp` instruments without matching `spot` markets (and vice versa).
+
 ## 📊 API & Web Interface
 
 The system includes a centralized API and an embedded web interface for monitoring and management.
@@ -53,10 +59,12 @@ The engine is built for dense data streams with low latency. Values below are cu
 - `cmd/api/`: Entry point for the combined API and Web Interface.
 - `cmd/pumpbot/`: Pump Detector entry point.
 - `cmd/arbitragebot/`: Arbitrage Bot entry point.
+- `cmd/manipulationbot/`: Spot-vs-perp Manipulation Bot entry point.
 - `internal/exchange/`: 
     - `client/`: Bybit and BingX exchange adapters.
     - `pumpbot/`: Core logic for impulse detection.
     - `arbitragebot/`: Core logic for spread monitoring and API handlers.
+    - `manipulationbot/`: Core logic for ATR-based spot-vs-perp anomaly detection.
     - `ws_manager.go`: Unified WebSocket connection manager.
 - `internal/ui/`: Embedded Nuxt.js frontend assets and serving logic.
 - `internal/notifier/`: Telegram notification system.
@@ -93,3 +101,4 @@ The system uses a flexible configuration approach with the following priority:
 4. **Run API & Web Interface**: `go run cmd/api/main.go`
 5. **Run Arbitrage Bot**: `go run cmd/arbitragebot/main.go`
 6. **Run Pump Bot**: `go run cmd/pumpbot/main.go`
+7. **Run Manipulation Bot**: `go run cmd/manipulationbot/main.go`

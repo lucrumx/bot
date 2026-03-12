@@ -34,6 +34,8 @@ func InitDB(cfg *config.Config) *gorm.DB {
 	modelsToMigrate := []interface{}{
 		&models.User{},
 		&models.ArbitrageSpread{},
+		&models.Order{},
+		&models.Balance{},
 	}
 
 	for _, m := range modelsToMigrate {

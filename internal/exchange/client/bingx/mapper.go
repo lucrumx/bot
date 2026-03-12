@@ -1,19 +1,14 @@
 package bingx
 
 import (
-	"strings"
-
 	"github.com/lucrumx/bot/internal/exchange"
+	"github.com/lucrumx/bot/internal/exchange/client/bingx/dtos"
 )
 
-func mapTicker(d TickerDTO) (exchange.Ticker, error) {
+func mapTicker(d dtos.TickerDTO) (exchange.Ticker, error) {
 	var t exchange.Ticker
 
-	if strings.Contains(d.Symbol, "-USDT") {
-		d.Symbol = strings.TrimSuffix(d.Symbol, "-USDT") + "USDT"
-	}
-
-	t.Symbol = d.Symbol
+	t.Symbol = normalizeTickerName(d.Symbol)
 
 	return t, nil
 }

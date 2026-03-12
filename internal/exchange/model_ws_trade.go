@@ -13,9 +13,10 @@ const (
 
 // Trade represents a websocket trade with details like symbol, timestamp, price, volume, side, and USDT amount.
 type Trade struct {
-	Symbol string
-	Ts     int64
-	Price  float64
-	Volume float64
-	Side   Side
+	Symbol   string
+	Category Category
+	Ts       int64
+	Price    float64
+	Volume   float64
+	Side     Side
 }
