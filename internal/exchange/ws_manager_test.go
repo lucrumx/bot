@@ -15,7 +15,7 @@ type mockWsClient struct {
 	symbols []string
 }
 
-func (m *mockWsClient) Start(ctx context.Context, symbols []string, outChan chan<- Trade) error {
+func (m *mockWsClient) Start(ctx context.Context, symbols []string, category Category, outChan chan<- Trade) error {
 	m.symbols = symbols
 	go func() {
 		ticker := time.NewTicker(100 * time.Millisecond)
@@ -28,11 +28,12 @@ func (m *mockWsClient) Start(ctx context.Context, symbols []string, outChan chan
 			case <-ticker.C:
 				for _, s := range symbols {
 					outChan <- Trade{
-						Symbol: s,
-						Side:   Buy,
-						Price:  100.50,
-						Volume: 0.1,
-						Ts:     time.Now().UnixMilli(),
+						Symbol:   s,
+						Category: category,
+						Side:     Buy,
+						Price:    100.50,
+						Volume:   0.1,
+						Ts:       time.Now().UnixMilli(),
 					}
 				}
 			}
@@ -60,7 +61,7 @@ func TestWSManager_SubscribeTrades(t *testing.T) {
 	defer cancel()
 
 	symbols := []string{"BTCUSDT", "ETHUSDT", "TONUSDT"}
-	tradeChannel, err := manager.SubscribeTrades(ctx, symbols)
+	tradeChannel, err := manager.SubscribeTrades(ctx, symbols, CategoryLinear)
 
 	require.NoError(t, err)
 	require.NotNil(t, tradeChannel)

@@ -37,6 +37,6 @@ func (c *Client) GetExchangeName() string {
 }
 
 // SubscribeTrades initiates WebSocket trade subscriptions for the given symbols and streams trades to the returned channel.
-func (c *Client) SubscribeTrades(ctx context.Context, symbols []string) (<-chan exchange.Trade, error) {
-	return c.wsManager.SubscribeTrades(ctx, symbols)
+func (c *Client) SubscribeTrades(ctx context.Context, symbols []string, category exchange.Category) (<-chan exchange.Trade, error) {
+	return c.wsManager.SubscribeTrades(ctx, symbols, category)
 }

@@ -9,7 +9,7 @@ import (
 
 // WsClient defines an interface for starting a websocket client to stream trades for specified symbols into an output channel.
 type WsClient interface {
-	Start(ctx context.Context, symbols []string, outChan chan<- Trade) error
+	Start(ctx context.Context, symbols []string, category Category, outChan chan<- Trade) error
 }
 
 // WSClientFactory defines a function type that creates a WsClient instance based on configuration.
@@ -34,7 +34,7 @@ func NewWSManager(cfg *config.Config, factory WSClientFactory) *WSManager {
 }
 
 // SubscribeTrades initiates WebSocket trade subscriptions for the given symbols and streams trades to the returned channel.
-func (m *WSManager) SubscribeTrades(ctx context.Context, symbols []string) (<-chan Trade, error) {
+func (m *WSManager) SubscribeTrades(ctx context.Context, symbols []string, category Category) (<-chan Trade, error) {
 	bufferSize := m.cfg.Exchange.WsClient.BufferSize
 	outChan := make(chan Trade, bufferSize)
 	symbolsChunks := chunkSymbols(symbols)
@@ -43,7 +43,7 @@ func (m *WSManager) SubscribeTrades(ctx context.Context, symbols []string) (<-ch
 		wsClient := m.factory(m.cfg)
 		m.wsClients = append(m.wsClients, wsClient)
 
-		if err := wsClient.Start(ctx, chunk, outChan); err != nil {
+		if err := wsClient.Start(ctx, chunk, category, outChan); err != nil {
 			return nil, fmt.Errorf("failed to start ws client: %w", err)
 		}
 	}

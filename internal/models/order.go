@@ -63,6 +63,7 @@ type Order struct {
 	ID               uuid.UUID       `gorm:"type:uuid;primary_key;default:uuidv7()"`
 	ExchangeOrderID  string          `gorm:"type:text;"` // Exchange assigned order id
 	ExchangeName     string          `gorm:"type:text;not null"`
+	Status           OrderStatus     `gorm:"type:text;not null;default:'PENDING'"`
 	Symbol           string          `gorm:"type:text;not null"`
 	Market           OrderMarket     `gorm:"type:text;not null"`
 	Side             OrderSide       `gorm:"type:text;not null"`

@@ -22,8 +22,8 @@ const (
 type Provider interface {
 	GetExchangeName() string
 	GetTickers(ctx context.Context, symbols []string, category Category) ([]Ticker, error)
-	SubscribeTrades(ctx context.Context, symbols []string) (<-chan Trade, error)
-	CreateOrder(ctx context.Context, order models.Order) error
+	SubscribeTrades(ctx context.Context, symbols []string, category Category) (<-chan Trade, error)
+	CreateOrder(ctx context.Context, order models.Order) (*models.Order, error)
 	GetBalances(ctx context.Context) ([]models.Balance, error)
 	SetLeverage(ctx context.Context, symbol string, leverage int64) error
 }

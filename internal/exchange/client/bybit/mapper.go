@@ -54,13 +54,14 @@ func mapTicker(d TickerDTO) (exchange.Ticker, error) {
 
 // mapWsTrade maps a WsTradeDTO object to an exchange.Trade object and calculates the USDT amount
 // uses while read and parse a websocket trade message.
-func mapWsTrade(d wsTradeDTO) exchange.Trade {
+func mapWsTrade(d wsTradeDTO, category exchange.Category) exchange.Trade {
 	return exchange.Trade{
-		Symbol: d.Symbol,
-		Ts:     d.T,
-		Side:   d.Side,
-		Price:  float64(d.Price),
-		Volume: float64(d.Volume),
+		Symbol:   d.Symbol,
+		Category: category,
+		Ts:       d.T,
+		Side:     d.Side,
+		Price:    float64(d.Price),
+		Volume:   float64(d.Volume),
 	}
 }
 

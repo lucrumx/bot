@@ -157,7 +157,7 @@ func (a *ArbitrageBot) grabTrade(ctx context.Context, symbols []string, tradeEve
 
 	for _, client := range a.clients {
 		exchangeName := client.GetExchangeName()
-		tradeCh, err := client.SubscribeTrades(subCtx, symbols)
+		tradeCh, err := client.SubscribeTrades(subCtx, symbols, exchange.CategoryLinear)
 		if err != nil {
 			sendErrNonBlocking(fmt.Errorf("failed to subscribe to trades on %s: %w", exchangeName, err))
 			return

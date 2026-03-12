@@ -82,7 +82,7 @@ func (b *Bot) StartBot(ctx context.Context) (<-chan exchange.Trade, error) {
 
 	filteredTickers := b.filterTickers(tickers)
 
-	sourceChan, err := b.provider.SubscribeTrades(ctx, filteredTickers)
+	sourceChan, err := b.provider.SubscribeTrades(ctx, filteredTickers, exchange.CategoryLinear)
 	if err != nil {
 		return nil, err
 	}

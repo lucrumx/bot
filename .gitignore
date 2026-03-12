@@ -33,6 +33,7 @@ config.yaml
 /.vscode/
 
 .DS_Store
+.gocache
 
-*.md
+#*.md
 !README.md

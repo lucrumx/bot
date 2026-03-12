@@ -88,9 +88,15 @@ func Test_CreateOrder_Integration(t *testing.T) {
 		Quantity: decimal.NewFromInt(1),
 	}
 
-	err := bybit.CreateOrder(ctx, order)
+	confirmedOrder, err := bybit.CreateOrder(ctx, order)
 
 	assert.NoError(t, err)
+	assert.NotNil(t, confirmedOrder)
+	assert.Equal(t, order.ID, confirmedOrder.ID)
+	assert.Equal(t, bybit.GetExchangeName(), confirmedOrder.ExchangeName)
+	assert.Equal(t, "1321003749386327552", confirmedOrder.ExchangeOrderID)
+	assert.Equal(t, models.OrderStatusNew, confirmedOrder.Status)
+	assert.NotEmpty(t, confirmedOrder.RawResponse)
 
 	var payload map[string]interface{}
 	err = json.Unmarshal(bodyBytes, &payload)

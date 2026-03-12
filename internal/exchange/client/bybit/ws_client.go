@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -17,6 +18,7 @@ import (
 )
 
 const linearPublicWsURL = "/v5/public/linear"
+const spotPublicWsURL = "/v5/public/spot"
 const batchSize = 20
 const pingPongInterval = 20
 
@@ -40,8 +42,13 @@ func newWsClient(cfg *config.Config) *wsClient {
 	}
 }
 
-func (c *wsClient) Start(ctx context.Context, symbols []string, outChan chan<- exchange.Trade) error {
-	wsConn, _, err := websocket.DefaultDialer.Dial(c.url, nil)
+func (c *wsClient) Start(ctx context.Context, symbols []string, category exchange.Category, outChan chan<- exchange.Trade) error {
+	wsURL, err := c.getURL(category)
+	if err != nil {
+		return err
+	}
+
+	wsConn, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
 	if err != nil {
 		return fmt.Errorf("failed to dial websocket: %w", err)
 	}
@@ -52,7 +59,7 @@ func (c *wsClient) Start(ctx context.Context, symbols []string, outChan chan<- e
 	}
 
 	go c.pingPong(ctx, wsConn)
-	go c.readMessages(ctx, wsConn, outChan)
+	go c.readMessages(ctx, wsConn, category, outChan)
 	go c.LogMetric(ctx)
 	go func() {
 		<-ctx.Done()
@@ -60,6 +67,17 @@ func (c *wsClient) Start(ctx context.Context, symbols []string, outChan chan<- e
 	}()
 
 	return nil
+}
+
+func (c *wsClient) getURL(category exchange.Category) (string, error) {
+	switch category {
+	case exchange.CategoryLinear:
+		return c.url, nil
+	case exchange.CategorySpot:
+		return strings.TrimSuffix(c.url, linearPublicWsURL) + spotPublicWsURL, nil
+	default:
+		return "", fmt.Errorf("unsupported bybit trade category: %s", category)
+	}
 }
 
 func (c *wsClient) writeJSON(wsConn *websocket.Conn, payload interface{}) error {
@@ -116,7 +134,7 @@ func (c *wsClient) pingPong(ctx context.Context, wsConn *websocket.Conn) {
 	}
 }
 
-func (c *wsClient) readMessages(ctx context.Context, wsConn *websocket.Conn, outChan chan<- exchange.Trade) {
+func (c *wsClient) readMessages(ctx context.Context, wsConn *websocket.Conn, category exchange.Category, outChan chan<- exchange.Trade) {
 	defer func() {
 		err := wsConn.Close()
 		if err != nil && ctx.Err() == nil { // log only if context did not close the connection (context still alive
@@ -149,7 +167,7 @@ func (c *wsClient) readMessages(ctx context.Context, wsConn *websocket.Conn, out
 
 		if message.Topic != "" {
 			for _, t := range message.Data {
-				trade := mapWsTrade(t)
+				trade := mapWsTrade(t, category)
 
 				select {
 				case outChan <- trade:

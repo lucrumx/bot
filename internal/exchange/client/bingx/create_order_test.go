@@ -43,7 +43,9 @@ func Test_CreateOrder_Integration(t *testing.T) {
             "msg": "",
             "data": {
                 "order": {
-                    "symbol": "BTC-USDT"
+                    "symbol": "BTC-USDT",
+                    "orderId": 987654321,
+                    "clientOrderId": "client-id-1"
                 }
             }
         }`))
@@ -65,9 +67,15 @@ func Test_CreateOrder_Integration(t *testing.T) {
 		Quantity: decimal.NewFromInt(1),
 	}
 
-	err := bingx.CreateOrder(ctx, order)
+	confirmedOrder, err := bingx.CreateOrder(ctx, order)
 
 	assert.NoError(t, err)
+	assert.NotNil(t, confirmedOrder)
+	assert.Equal(t, order.ID, confirmedOrder.ID)
+	assert.Equal(t, bingx.GetExchangeName(), confirmedOrder.ExchangeName)
+	assert.Equal(t, "987654321", confirmedOrder.ExchangeOrderID)
+	assert.Equal(t, models.OrderStatusPending, confirmedOrder.Status)
+	assert.NotEmpty(t, confirmedOrder.RawResponse)
 }
 
 func Test_CreateOrder_ValidateBeforeCreate(t *testing.T) {

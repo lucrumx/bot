@@ -8,13 +8,16 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/shopspring/decimal"
+
 	"github.com/lucrumx/bot/internal/exchange/client/bingx/dtos"
+	"github.com/lucrumx/bot/internal/models"
 )
 
 const balanceURL = "/openApi/swap/v3/user/balance"
 
 // GetBalances returns the balances of the user's account on the exchange.
-func (c *Client) GetBalances(ctx context.Context) ([]dtos.Balance, error) {
+func (c *Client) GetBalances(ctx context.Context) ([]models.Balance, error) {
 	req, err := http.NewRequestWithContext(
 		ctx,
 		http.MethodGet,
@@ -58,5 +61,20 @@ func (c *Client) GetBalances(ctx context.Context) ([]dtos.Balance, error) {
 		return nil, fmt.Errorf("BingX client failed to get balance, code: %d, msg: %s", raw.Code, raw.Msg)
 	}
 
-	return raw.Data, nil
+	return c.mapper(raw), nil
+}
+
+func (c *Client) mapper(raw dtos.ResponseGetBalanceDTO) []models.Balance {
+	result := make([]models.Balance, 0, len(raw.Data))
+	for _, b := range raw.Data {
+		result = append(result, models.Balance{
+			ExchangeName: c.GetExchangeName(),
+			Asset:        b.Asset,
+			Free:         decimal.NewFromFloat(float64(b.AvailableMargin)),
+			Locked:       decimal.NewFromFloat(float64(b.FreezedMargin)),
+			Total:        decimal.NewFromFloat(float64(b.Equity)),
+		})
+	}
+
+	return result
 }
