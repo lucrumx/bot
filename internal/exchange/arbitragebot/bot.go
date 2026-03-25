@@ -71,6 +71,39 @@ func (a *ArbitrageBot) Run(ctx context.Context) error {
 		return fmt.Errorf("not enough clients: %d", len(a.clients))
 	}
 
+	// Start retriving balances
+	balanceStore := newBalanceStore(a.logger)
+	balanceStore.Start(ctx, a.clients)
+	go func() {
+		ticker := time.NewTicker(time.Second * 10)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				for _, client := range a.clients {
+					balances, ok := balanceStore.Get(client.GetExchangeName())
+
+					if ok {
+						fmt.Println("O-------")
+						fmt.Println(client.GetExchangeName())
+						fmt.Println(balances)
+						fmt.Println("C-------")
+					} else {
+						fmt.Println("O-------")
+						fmt.Println(client.GetExchangeName())
+						fmt.Println("Balance is empty")
+						fmt.Println("C-------")
+					}
+				}
+			}
+		}
+	}()
+
+	// END BALANCES
+
 	uniq, notUniqName, uniqNames := checkUniqClient(a.clients)
 	if !uniq {
 		return fmt.Errorf("not uniq clients: %s", notUniqName)
