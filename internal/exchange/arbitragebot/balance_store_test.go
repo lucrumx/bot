@@ -4,12 +4,13 @@ import (
 	"io"
 	"testing"
 
-	"github.com/lucrumx/bot/internal/exchange"
-	"github.com/lucrumx/bot/internal/models"
-	exchange_mocks "github.com/lucrumx/bot/internal/testmocks/exchange"
 	"github.com/rs/zerolog"
 	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/lucrumx/bot/internal/exchange"
+	"github.com/lucrumx/bot/internal/models"
+	exchangeMocks "github.com/lucrumx/bot/internal/testmocks/exchange"
 )
 
 func TestBalanceStore_SetAndGetForAsset(t *testing.T) {
@@ -18,10 +19,10 @@ func TestBalanceStore_SetAndGetForAsset(t *testing.T) {
 	store.Set([]models.Balance{
 		{
 			ExchangeName: "ByBit",
-			Asset: "BTCUSDT",
-			Free: decimal.RequireFromString("10"),
-			Locked: decimal.RequireFromString("1"),
-			Total: decimal.RequireFromString("11"),
+			Asset:        "BTCUSDT",
+			Free:         decimal.RequireFromString("10"),
+			Locked:       decimal.RequireFromString("1"),
+			Total:        decimal.RequireFromString("11"),
 		},
 	})
 
@@ -38,13 +39,13 @@ func TestBalanceStore_Get(t *testing.T) {
 	bs.Set([]models.Balance{
 		{
 			ExchangeName: "ByBit",
-			Asset: "BTCUSDT",
-			Total: decimal.RequireFromString("10"),
+			Asset:        "BTCUSDT",
+			Total:        decimal.RequireFromString("10"),
 		},
 		{
 			ExchangeName: "ByBit",
-			Asset: "TONUSDT",
-			Total: decimal.RequireFromString("20"),
+			Asset:        "TONUSDT",
+			Total:        decimal.RequireFromString("20"),
 		},
 	})
 
@@ -62,15 +63,14 @@ func TestBalanceStore_RetrieveBalances(t *testing.T) {
 
 	ctx := t.Context()
 
-	okProvider := exchange_mocks.NewMockProvider(t)
+	okProvider := exchangeMocks.NewMockProvider(t)
 	okProvider.EXPECT().GetBalances(ctx).Return([]models.Balance{
 		{
 			ExchangeName: "ByBit",
-			Asset: "BTCUSDT",
-			Total: decimal.RequireFromString("10"),
+			Asset:        "BTCUSDT",
+			Total:        decimal.RequireFromString("10"),
 		},
 	}, nil)
-
 
 	store.retrieveBalances(ctx, []exchange.Provider{okProvider})
 

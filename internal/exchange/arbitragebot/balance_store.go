@@ -5,9 +5,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/rs/zerolog"
+
 	"github.com/lucrumx/bot/internal/exchange"
 	"github.com/lucrumx/bot/internal/models"
-	"github.com/rs/zerolog"
 )
 
 //mockery:generate: true
@@ -20,17 +21,17 @@ type BalanceStore interface {
 type balanceStore struct {
 	mu       sync.RWMutex
 	balances map[string]map[string]models.Balance // exchange -> currency -> balance
-	logger zerolog.Logger
+	logger   zerolog.Logger
 }
 
 func newBalanceStore(logger zerolog.Logger) *balanceStore {
 	return &balanceStore{
-		logger: logger,
+		logger:   logger,
 		balances: make(map[string]map[string]models.Balance),
 	}
 }
 
-func (bs *balanceStore) Start (ctx context.Context, clients []exchange.Provider) {
+func (bs *balanceStore) Start(ctx context.Context, clients []exchange.Provider) {
 	bs.retrieveBalances(ctx, clients)
 
 	go func() {
@@ -38,21 +39,21 @@ func (bs *balanceStore) Start (ctx context.Context, clients []exchange.Provider)
 		defer ticker.Stop()
 		for {
 			select {
-				case <-ctx.Done():
-					return
-				case <-ticker.C:
-					bs.retrieveBalances(ctx, clients)
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				bs.retrieveBalances(ctx, clients)
 			}
 		}
 	}()
 }
 
 func (bs *balanceStore) retrieveBalances(ctx context.Context, clients []exchange.Provider) {
-	for _, exchange := range clients {
-		balances, err := exchange.GetBalances(ctx)
+	for _, clients := range clients {
+		balances, err := clients.GetBalances(ctx)
 
 		if err != nil {
-			bs.logger.Warn().Err(err).Msgf("can`t get balance for exchange %s", exchange.GetExchangeName())
+			bs.logger.Warn().Err(err).Msgf("can`t get balance for exchange %s", clients.GetExchangeName())
 			continue
 		}
 

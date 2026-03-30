@@ -19,6 +19,7 @@ const (
 )
 
 // Provider represents an exchange provider (ByBit, Binance, BingX, and etc.).
+//
 //mockery:generate: true
 type Provider interface {
 	GetExchangeName() string
