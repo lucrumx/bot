@@ -3,6 +3,7 @@ package bybit
 import (
 	"testing"
 
+	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/lucrumx/bot/internal/config"
@@ -21,7 +22,7 @@ func TestClient_GetBalances(t *testing.T) {
 		},
 	}
 
-	client := NewByBitClient(&cfg)
+	client := NewByBitClient(&cfg, zerolog.Nop())
 	balances, err := client.GetBalances(t.Context())
 
 	assert.NoError(t, err)

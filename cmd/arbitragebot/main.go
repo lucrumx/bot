@@ -30,7 +30,7 @@ func main() {
 		logger.Fatal().Err(err).Msg("Error loading config")
 	}
 
-	byBitClient := bybit.NewByBitClient(cfg)
+	byBitClient := bybit.NewByBitClient(cfg, logger)
 	bingXClient := bingx.NewClient(cfg)
 
 	clients := []exchange.Provider{
@@ -40,7 +40,7 @@ func main() {
 
 	db := storage.InitDB(cfg)
 	notif := notifier.NewTelegramNotifier(cfg)
-	arbitrageSpreadRepo := arbitragebot.NewRepository(db)
+	arbitrageSpreadRepo := arbitragebot.NewArbitrageSpreadRepository(db)
 
 	bot := arbitragebot.NewBot(clients, logger, cfg, notif, arbitrageSpreadRepo)
 

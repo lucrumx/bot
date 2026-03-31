@@ -34,6 +34,8 @@ config.yaml
 
 .DS_Store
 .gocache
+/.golangci-lint-cache/
+/bin/
 
 #*.md
 !README.md

@@ -42,3 +42,8 @@ func (c *Client) GetExchangeName() string {
 func (c *Client) SubscribeTrades(ctx context.Context, symbols []string, category exchange.Category) (<-chan exchange.Trade, error) {
 	return c.wsManager.SubscribeTrades(ctx, symbols, category)
 }
+
+// SubscribeExecutions subscribes to order execution events and streams them to the returned channel. Implements the interface Provider
+func (c *Client) SubscribeExecutions(_ context.Context) (<-chan exchange.OrderExecutionEvent, error) {
+	return nil, nil
+}

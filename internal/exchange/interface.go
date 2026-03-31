@@ -19,6 +19,8 @@ const (
 )
 
 // Provider represents an exchange provider (ByBit, Binance, BingX, and etc.).
+//
+//mockery:generate: true
 type Provider interface {
 	GetExchangeName() string
 	GetTickers(ctx context.Context, symbols []string, category Category) ([]Ticker, error)
@@ -26,4 +28,6 @@ type Provider interface {
 	CreateOrder(ctx context.Context, order models.Order) (*models.Order, error)
 	GetBalances(ctx context.Context) ([]models.Balance, error)
 	SetLeverage(ctx context.Context, symbol string, leverage int64) error
+	//
+	SubscribeExecutions(ctx context.Context) (<-chan OrderExecutionEvent, error)
 }

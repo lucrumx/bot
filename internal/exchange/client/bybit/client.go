@@ -5,6 +5,8 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/rs/zerolog"
+
 	"github.com/lucrumx/bot/internal/config"
 	"github.com/lucrumx/bot/internal/exchange"
 )
@@ -14,17 +16,22 @@ type Client struct {
 	exchangeName string
 	baseURL      string
 	http         *http.Client
-	wsManager    *exchange.WSManager
 	cfg          *config.Config
+	logger       zerolog.Logger
+
+	wsManager        *exchange.WSManager
+	wsPrivate        *WsPrivateClient
+	wsPrivateStarted bool
 }
 
 // NewByBitClient creates a new ByBitClient.
-func NewByBitClient(cfg *config.Config) *Client {
+func NewByBitClient(cfg *config.Config, logger zerolog.Logger) *Client {
 	return &Client{
 		exchangeName: "ByBit",
 		baseURL:      cfg.Exchange.ByBit.BaseURL,
 		http:         &http.Client{},
 		cfg:          cfg,
+		logger:       logger,
 		wsManager: exchange.NewWSManager(cfg, func(c *config.Config) exchange.WsClient {
 			return newWsClient(c)
 		}),
@@ -39,4 +46,16 @@ func (c *Client) GetExchangeName() string {
 // SubscribeTrades initiates WebSocket trade subscriptions for the given symbols and streams trades to the returned channel.
 func (c *Client) SubscribeTrades(ctx context.Context, symbols []string, category exchange.Category) (<-chan exchange.Trade, error) {
 	return c.wsManager.SubscribeTrades(ctx, symbols, category)
+}
+
+// SubscribeExecutions subscribes to order execution events and streams them to the returned channel. Implements the interface Provider
+func (c *Client) SubscribeExecutions(ctx context.Context) (<-chan exchange.OrderExecutionEvent, error) {
+	if !c.wsPrivateStarted {
+		c.wsPrivate = NewWsPrivateClient(c.cfg, c.logger)
+		if err := c.wsPrivate.Start(ctx); err != nil {
+			return nil, err
+		}
+		c.wsPrivateStarted = true
+	}
+	return c.wsPrivate.SubscribeToExecutions()
 }

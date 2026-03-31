@@ -25,7 +25,7 @@ func main() {
 		logger.Fatal().Err(err).Msg("Error loading config")
 	}
 
-	provider := bybit.NewByBitClient(cfg)
+	provider := bybit.NewByBitClient(cfg, logger)
 	notif := notifier.NewTelegramNotifier(cfg)
 	botCfg := loadBotConfig(cfg)
 	bot := manipulationbot.NewBot(provider, notif, botCfg, logger)

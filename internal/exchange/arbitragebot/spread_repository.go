@@ -24,13 +24,13 @@ type FindFilter struct {
 	NotInStatus []models.ArbitrageSpreadStatus
 }
 
-// Repository is a GORM implementation of ArbitrageSpreadRepository.
+// Repository is a GORM implementation of ArbitrageSpreadRepository interface.
 type Repository struct {
 	db *gorm.DB
 }
 
-// NewRepository creates a new GormArbitrageSpreadRepository.
-func NewRepository(db *gorm.DB) *Repository {
+// NewArbitrageSpreadRepository creates a new GormArbitrageSpreadRepository.
+func NewArbitrageSpreadRepository(db *gorm.DB) *Repository {
 	return &Repository{db: db}
 }
 

@@ -51,7 +51,7 @@ func main() {
 	authH := authHandler.Create(authSrv)
 
 	//arbitrage
-	arbitrageSpreadRepo := arbitragebot.NewRepository(db)
+	arbitrageSpreadRepo := arbitragebot.NewArbitrageSpreadRepository(db)
 	arbitrageH := arbitragebot.NewHTTPHandlers(arbitrageSpreadRepo)
 
 	r := gin.Default()
