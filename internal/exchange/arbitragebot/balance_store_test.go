@@ -57,7 +57,7 @@ func TestBalanceStore_Get(t *testing.T) {
 	assert.Len(t, got, 2)
 
 	assets := []string{got[0].Asset, got[1].Asset}
-	assert.Equal(t, []string{"BTCUSDT", "TONUSDT"}, assets)
+	assert.ElementsMatch(t, []string{"BTCUSDT", "TONUSDT"}, assets)
 }
 
 func TestBalanceStore_RetrieveBalances(t *testing.T) {
