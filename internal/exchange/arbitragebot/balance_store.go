@@ -11,13 +11,6 @@ import (
 	"github.com/lucrumx/bot/internal/models"
 )
 
-//mockery:generate: true
-type BalanceStore interface {
-	GetForAsset(exchange string, asset string) (models.Balance, bool)
-	Get(exchange string) ([]models.Balance, bool)
-	Set(exchange string, balances []models.Balance)
-}
-
 type balanceStore struct {
 	mu       sync.RWMutex
 	balances map[string]map[string]models.Balance // exchange -> currency -> balance

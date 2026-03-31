@@ -17,8 +17,9 @@ import (
 	wstopics "github.com/lucrumx/bot/internal/exchange/client/bybit/ws_topics"
 )
 
-const wsPrivateUrl = "/v5/private"
+const wsPrivateURL = "/v5/private"
 
+// WsPrivateClient handles private WebSocket connections to the exchange, including authentication and message processing.
 type WsPrivateClient struct {
 	url    string
 	cfg    *config.Config
@@ -30,9 +31,10 @@ type WsPrivateClient struct {
 	executionSubscribed bool
 }
 
+// NewWsPrivateClient initializes a WsPrivateClient with the given configuration and logger for private WebSocket connections.
 func NewWsPrivateClient(cfg *config.Config, logger zerolog.Logger) *WsPrivateClient {
 	return &WsPrivateClient{
-		url:    cfg.Exchange.ByBit.WsBaseURL + wsPrivateUrl,
+		url:    cfg.Exchange.ByBit.WsBaseURL + wsPrivateURL,
 		cfg:    cfg,
 		logger: logger,
 
@@ -41,6 +43,7 @@ func NewWsPrivateClient(cfg *config.Config, logger zerolog.Logger) *WsPrivateCli
 	}
 }
 
+// Start initializes the private webSocket connection, performs authentication, and starts message handling and ping routines.
 func (c *WsPrivateClient) Start(ctx context.Context) error {
 	wsConn, _, err := websocket.DefaultDialer.Dial(c.url, nil)
 	if err != nil {
@@ -117,7 +120,7 @@ func (c *WsPrivateClient) auth() error {
 		return fmt.Errorf("failed to unmarshal auth response: %w", err)
 	}
 
-	if authMessage.Success != true {
+	if !authMessage.Success {
 		return fmt.Errorf("auth response not successful, %v", authMessage)
 	}
 
@@ -143,7 +146,7 @@ func (c *WsPrivateClient) pingPing(ctx context.Context) {
 	}
 }
 
-// SubscribeToExecutions subscribe to executions stream
+// SubscribeToExecutions subscribe to execution stream
 func (c *WsPrivateClient) SubscribeToExecutions() (<-chan exchange.OrderExecutionEvent, error) {
 	if !c.executionSubscribed {
 		payload := map[string]interface{}{
@@ -184,7 +187,7 @@ func (c *WsPrivateClient) handleMessage() error {
 	switch message.Topic {
 	case wstopics.Execution:
 		orders := c.handleExecutionEvent(&message)
-		if orders != nil && len(orders) > 0 {
+		if len(orders) > 0 {
 			for _, order := range orders {
 				// Blocking, but channel has buffer
 				c.executionChannel <- order
@@ -204,10 +207,10 @@ func (c *WsPrivateClient) handleExecutionEvent(message *dtos.MessageDTO) []excha
 
 	orders := map[uuid.UUID]exchange.OrderExecutionEvent{}
 	for _, execution := range executions {
-		orderId := execution.OrderLinkID
+		orderID := execution.OrderLinkID
 
-		if _, ok := orders[orderId]; !ok {
-			orders[orderId] = exchange.OrderExecutionEvent{
+		if _, ok := orders[orderID]; !ok {
+			orders[orderID] = exchange.OrderExecutionEvent{
 				OrderID:    execution.OrderLinkID,
 				ExecPrice:  execution.ExecPrice,
 				ExecQty:    execution.ExecQty,
@@ -217,12 +220,12 @@ func (c *WsPrivateClient) handleExecutionEvent(message *dtos.MessageDTO) []excha
 				OrderQty:   execution.OrderQty,
 			}
 		} else {
-			order := orders[orderId]
+			order := orders[orderID]
 			order.ExecQty = order.ExecQty.Add(execution.ExecQty)
 			order.ExecValue = order.ExecValue.Add(execution.ExecValue)
 			order.ExecPrice = order.ExecValue.Div(order.ExecQty)
 			order.LeavesQty = execution.LeavesQty
-			orders[orderId] = order
+			orders[orderID] = order
 		}
 	}
 

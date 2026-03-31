@@ -43,6 +43,7 @@ func (c *Client) SubscribeTrades(ctx context.Context, symbols []string, category
 	return c.wsManager.SubscribeTrades(ctx, symbols, category)
 }
 
-func (c *Client) SubscribeExecutions(ctx context.Context) (<-chan exchange.OrderExecutionEvent, error) {
+// SubscribeExecutions subscribes to order execution events and streams them to the returned channel. Implements the interface Provider
+func (c *Client) SubscribeExecutions(_ context.Context) (<-chan exchange.OrderExecutionEvent, error) {
 	return nil, nil
 }

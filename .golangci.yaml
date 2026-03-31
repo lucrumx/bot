@@ -1,5 +1,6 @@
 run:
   timeout: 3m
+  modules-download-mode: readonly
 
 linters:
   enable:
@@ -12,6 +13,10 @@ linters:
 
 issues:
   exclude-use-default: false
+  exclude-dirs:
+    - internal/testmocks
+  exclude-files:
+    - ".*_mock\\.go$"
 
 linters-settings:
   goimports:

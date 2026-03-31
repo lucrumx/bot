@@ -5,6 +5,7 @@ import (
 	"github.com/shopspring/decimal"
 )
 
+// OrderExecutionEvent represents the execution of an order.
 type OrderExecutionEvent struct {
 	OrderID    uuid.UUID
 	ExecPrice  decimal.Decimal

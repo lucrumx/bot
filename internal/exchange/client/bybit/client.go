@@ -5,9 +5,10 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/rs/zerolog"
+
 	"github.com/lucrumx/bot/internal/config"
 	"github.com/lucrumx/bot/internal/exchange"
-	"github.com/rs/zerolog"
 )
 
 // Client represents a ByBit client.
@@ -47,6 +48,7 @@ func (c *Client) SubscribeTrades(ctx context.Context, symbols []string, category
 	return c.wsManager.SubscribeTrades(ctx, symbols, category)
 }
 
+// SubscribeExecutions subscribes to order execution events and streams them to the returned channel. Implements the interface Provider
 func (c *Client) SubscribeExecutions(ctx context.Context) (<-chan exchange.OrderExecutionEvent, error) {
 	if !c.wsPrivateStarted {
 		c.wsPrivate = NewWsPrivateClient(c.cfg, c.logger)
