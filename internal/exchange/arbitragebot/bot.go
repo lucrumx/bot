@@ -72,6 +72,7 @@ func (a *ArbitrageBot) Run(ctx context.Context) error {
 	}
 
 	// Start retriving balances
+	// TODO: вынести обновление балансов в отедлный метод-горутину
 	balanceStore := newBalanceStore(a.logger)
 	balanceStore.Start(ctx, a.clients)
 	go func() {

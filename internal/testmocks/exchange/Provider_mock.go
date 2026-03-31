@@ -7,10 +7,9 @@ package exchange
 import (
 	"context"
 
-	mock "github.com/stretchr/testify/mock"
-
 	"github.com/lucrumx/bot/internal/exchange"
 	"github.com/lucrumx/bot/internal/models"
+	mock "github.com/stretchr/testify/mock"
 )
 
 // NewMockProvider creates a new instance of MockProvider. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
@@ -347,6 +346,68 @@ func (_c *MockProvider_SetLeverage_Call) Return(err error) *MockProvider_SetLeve
 }
 
 func (_c *MockProvider_SetLeverage_Call) RunAndReturn(run func(ctx context.Context, symbol string, leverage int64) error) *MockProvider_SetLeverage_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SubscribeExecutions provides a mock function for the type MockProvider
+func (_mock *MockProvider) SubscribeExecutions(ctx context.Context) (<-chan exchange.OrderExecutionEvent, error) {
+	ret := _mock.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SubscribeExecutions")
+	}
+
+	var r0 <-chan exchange.OrderExecutionEvent
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context) (<-chan exchange.OrderExecutionEvent, error)); ok {
+		return returnFunc(ctx)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context) <-chan exchange.OrderExecutionEvent); ok {
+		r0 = returnFunc(ctx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(<-chan exchange.OrderExecutionEvent)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = returnFunc(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockProvider_SubscribeExecutions_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SubscribeExecutions'
+type MockProvider_SubscribeExecutions_Call struct {
+	*mock.Call
+}
+
+// SubscribeExecutions is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *MockProvider_Expecter) SubscribeExecutions(ctx interface{}) *MockProvider_SubscribeExecutions_Call {
+	return &MockProvider_SubscribeExecutions_Call{Call: _e.mock.On("SubscribeExecutions", ctx)}
+}
+
+func (_c *MockProvider_SubscribeExecutions_Call) Run(run func(ctx context.Context)) *MockProvider_SubscribeExecutions_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *MockProvider_SubscribeExecutions_Call) Return(orderExecutionEventCh <-chan exchange.OrderExecutionEvent, err error) *MockProvider_SubscribeExecutions_Call {
+	_c.Call.Return(orderExecutionEventCh, err)
+	return _c
+}
+
+func (_c *MockProvider_SubscribeExecutions_Call) RunAndReturn(run func(ctx context.Context) (<-chan exchange.OrderExecutionEvent, error)) *MockProvider_SubscribeExecutions_Call {
 	_c.Call.Return(run)
 	return _c
 }

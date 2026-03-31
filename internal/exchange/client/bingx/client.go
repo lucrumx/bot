@@ -42,3 +42,7 @@ func (c *Client) GetExchangeName() string {
 func (c *Client) SubscribeTrades(ctx context.Context, symbols []string, category exchange.Category) (<-chan exchange.Trade, error) {
 	return c.wsManager.SubscribeTrades(ctx, symbols, category)
 }
+
+func (c *Client) SubscribeExecutions(ctx context.Context) (<-chan exchange.OrderExecutionEvent, error) {
+	return nil, nil
+}

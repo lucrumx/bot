@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/require"
 
 	"github.com/lucrumx/bot/internal/config"
@@ -24,7 +25,7 @@ func TestClient_GetTickers_Integration(t *testing.T) {
 		},
 	}
 
-	client := NewByBitClient(cfg)
+	client := NewByBitClient(cfg, zerolog.Nop())
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()

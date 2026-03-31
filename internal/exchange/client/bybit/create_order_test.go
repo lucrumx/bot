@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/rs/zerolog"
 	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
 
@@ -74,7 +75,7 @@ func Test_CreateOrder_Integration(t *testing.T) {
 
 	ctx := t.Context()
 
-	bybit := NewByBitClient(cfg)
+	bybit := NewByBitClient(cfg, zerolog.Nop())
 	bybit.baseURL = server.URL
 	bybit.http = server.Client()
 

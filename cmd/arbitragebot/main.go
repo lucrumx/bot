@@ -30,7 +30,7 @@ func main() {
 		logger.Fatal().Err(err).Msg("Error loading config")
 	}
 
-	byBitClient := bybit.NewByBitClient(cfg)
+	byBitClient := bybit.NewByBitClient(cfg, logger)
 	bingXClient := bingx.NewClient(cfg)
 
 	clients := []exchange.Provider{

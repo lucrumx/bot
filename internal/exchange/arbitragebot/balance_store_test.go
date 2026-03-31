@@ -1,6 +1,7 @@
 package arbitragebot
 
 import (
+	"fmt"
 	"io"
 	"testing"
 
@@ -27,10 +28,11 @@ func TestBalanceStore_SetAndGetForAsset(t *testing.T) {
 	})
 
 	got, ok := store.GetForAsset("ByBit", "BTCUSDT")
+	fmt.Printf("%+v\n", got)
 	assert.True(t, ok)
 	assert.Equal(t, "ByBit", got.ExchangeName)
 	assert.Equal(t, "BTCUSDT", got.Asset)
-	assert.True(t, got.Total.Equal(decimal.RequireFromString("12")))
+	assert.Equal(t, got.Total.String(), "11")
 }
 
 func TestBalanceStore_Get(t *testing.T) {

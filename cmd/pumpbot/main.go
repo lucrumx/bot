@@ -29,7 +29,7 @@ func main() {
 
 	notif := notifier.NewTelegramNotifier(cfg)
 
-	client := bybit.NewByBitClient(cfg)
+	client := bybit.NewByBitClient(cfg, logger)
 	bot := pumpbot.NewBot(client, notif, cfg, log.Logger)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
