@@ -12,15 +12,16 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/lucrumx/bot/internal/config"
-	"github.com/lucrumx/bot/internal/exchange/client/bingx/dtos"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/lucrumx/bot/internal/config"
+	"github.com/lucrumx/bot/internal/exchange/client/bingx/dtos"
 )
 
 var testUpgrader = websocket.Upgrader{
-	CheckOrigin: func(r *http.Request) bool { return true },
+	CheckOrigin: func(_ *http.Request) bool { return true },
 }
 
 func gzipEncode(t *testing.T, data string) []byte {
@@ -49,7 +50,7 @@ func TestWsPrivateClient_Happy(t *testing.T) {
 
 		w.Header().Set("Content-Type", "application/json")
 		b, _ := json.Marshal(resp)
-		w.Write(b)
+		_, _ = w.Write(b)
 
 	}))
 
