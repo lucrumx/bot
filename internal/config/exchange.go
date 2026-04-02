@@ -20,9 +20,11 @@ type ByBitConfig struct {
 
 // BingXConfig contains configuration for BingX exchange.
 type BingXConfig struct {
-	WSUrl     string `yaml:"ws_url"`
-	APIKey    string `yaml:"api_key"`
-	APISecret string `yaml:"api_secret"`
+	APIBaseURL       string `yaml:"api_base_url"`
+	WSUrl            string `yaml:"ws_url"`
+	WSPrivateSwapURL string `yaml:"ws_private_swap_url"`
+	APIKey           string `yaml:"api_key"`
+	APISecret        string `yaml:"api_secret"`
 }
 
 // BotConfig contains configuration for the bot.

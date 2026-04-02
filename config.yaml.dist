@@ -20,7 +20,9 @@ exchange:
     api_key: "your-api-key-here"
     api_secret: "you-api-secret-here"
   bingx:
+    api_base_url: "https://open-api.bingx.com"
     ws_url: "wss://open-api-swap.bingx.com/swap-market"
+    ws_private_swap_url: "wss://open-api-swap.bingx.com/swap-market"
     api_key: "your-api-key-here"
     api_secret: "your-api-secret-here"
   ws_client:

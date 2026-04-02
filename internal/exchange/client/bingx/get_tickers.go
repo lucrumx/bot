@@ -44,7 +44,7 @@ func (c *Client) GetTickers(ctx context.Context, symbols []string, category exch
 	}
 
 	queryStr := getSortedQuery(query, time.Now().UnixMilli(), false)
-	signature := c.computeHmac256(queryStr)
+	signature := computeHmac256(c.cfg, queryStr)
 	req.URL.RawQuery = fmt.Sprintf("%s&signature=%s", getSortedQuery(query, 0, true), signature)
 
 	resp, err := c.httpClient.Do(req)

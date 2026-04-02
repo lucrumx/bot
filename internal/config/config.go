@@ -94,9 +94,11 @@ func loadFromEnv(cfg *Config, logger zerolog.Logger) error {
 	}
 
 	bingX := BingXConfig{
-		WSUrl:     utils.GetEnv("BINGX_WS_URL", ""),
-		APIKey:    utils.GetEnv("BINGX_API_KEY", ""),
-		APISecret: utils.GetEnv("BINGX_API_SECRET", ""),
+		APIBaseURL:       utils.GetEnv("BINGX_API_BASE_URL", ""),
+		WSUrl:            utils.GetEnv("BINGX_WS_URL", ""),
+		WSPrivateSwapURL: utils.GetEnv("BINGX_WS_PRIVATE_SWAP_URL", ""),
+		APIKey:           utils.GetEnv("BINGX_API_KEY", ""),
+		APISecret:        utils.GetEnv("BINGX_API_SECRET", ""),
 	}
 
 	wsClientBufferSize, err := strconv.Atoi(utils.GetEnv("WS_CLIENT_BUFFER_SIZE", "5000"))
@@ -255,8 +257,14 @@ func validateConfig(cfg *Config) error {
 	}
 
 	// BingX
+	if cfg.Exchange.BingX.APIBaseURL == "" {
+		return raiseErrorYAML("Exchange.BingX.APIBaseURL")
+	}
 	if cfg.Exchange.BingX.WSUrl == "" {
 		return raiseErrorYAML("Exchange.BingX.WSUrl")
+	}
+	if cfg.Exchange.BingX.WSPrivateSwapURL == "" {
+		return raiseErrorYAML("Exchange.BingX.WSPrivateSwapURL")
 	}
 	if cfg.Exchange.BingX.APIKey == "" {
 		return raiseErrorYAML("Exchange.BingX.APIKey")

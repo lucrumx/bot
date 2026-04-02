@@ -31,7 +31,7 @@ func main() {
 	}
 
 	byBitClient := bybit.NewByBitClient(cfg, logger)
-	bingXClient := bingx.NewClient(cfg)
+	bingXClient := bingx.NewClient(cfg, logger)
 
 	clients := []exchange.Provider{
 		byBitClient,

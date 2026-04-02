@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/lucrumx/bot/internal/config"
@@ -21,7 +22,7 @@ func TestClient_GetBalances(t *testing.T) {
 		},
 	}
 
-	bingx := NewClient(cfg)
+	bingx := NewClient(cfg, zerolog.Nop())
 
 	ctx := t.Context()
 	balances, err := bingx.GetBalances(ctx)

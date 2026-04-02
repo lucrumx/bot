@@ -47,7 +47,7 @@ func NewWsPrivateClient(cfg *config.Config, logger zerolog.Logger) *WsPrivateCli
 func (c *WsPrivateClient) Start(ctx context.Context) error {
 	wsConn, _, err := websocket.DefaultDialer.Dial(c.url, nil)
 	if err != nil {
-		return fmt.Errorf("BiBit ws private: failed to connect to websocket: %w", err)
+		return fmt.Errorf("ByBit ws private: failed to connect to websocket: %w", err)
 	}
 
 	c.wsConn = wsConn

@@ -8,6 +8,8 @@ import (
 	"net/url"
 	"sort"
 	"strings"
+
+	"github.com/lucrumx/bot/internal/config"
 )
 
 func getSortedQuery(query map[string]string, timestamp int64, urlEncode bool) string {
@@ -37,8 +39,8 @@ func getSortedQuery(query map[string]string, timestamp int64, urlEncode bool) st
 	return queryStr
 }
 
-func (c *Client) computeHmac256(sortedQueryStr string) string {
-	key := []byte(c.cfg.Exchange.BingX.APISecret)
+func computeHmac256(cfg *config.Config, sortedQueryStr string) string {
+	key := []byte(cfg.Exchange.BingX.APISecret)
 	h := hmac.New(sha256.New, key)
 	h.Write([]byte(sortedQueryStr))
 	return hex.EncodeToString(h.Sum(nil))
