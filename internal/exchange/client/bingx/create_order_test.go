@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/rs/zerolog"
 	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
 
@@ -54,7 +55,7 @@ func Test_CreateOrder_Integration(t *testing.T) {
 
 	ctx := t.Context()
 
-	bingx := NewClient(cfg)
+	bingx := NewClient(cfg, zerolog.Nop())
 	bingx.baseURL = server.URL
 	bingx.httpClient = server.Client()
 

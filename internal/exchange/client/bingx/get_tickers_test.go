@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -26,7 +27,7 @@ func TestClient_GetTickers(t *testing.T) {
 		},
 	}
 
-	client := NewClient(cfg)
+	client := NewClient(cfg, zerolog.Nop())
 	ctx := t.Context()
 
 	tickers, err := client.GetTickers(ctx, []string{}, exchange.CategoryLinear)
@@ -60,7 +61,7 @@ func TestClient_GetTickers_NormalizesTickerSymbols(t *testing.T) {
 		},
 	}
 
-	c := NewClient(cfg)
+	c := NewClient(cfg, zerolog.Nop())
 	c.baseURL = srv.URL
 	c.httpClient = srv.Client()
 

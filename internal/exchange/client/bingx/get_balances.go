@@ -31,7 +31,7 @@ func (c *Client) GetBalances(ctx context.Context) ([]models.Balance, error) {
 	query := make(map[string]string)
 	timestamp := time.Now().UnixMilli()
 	queryStr := getSortedQuery(query, timestamp, false)
-	signature := c.computeHmac256(queryStr)
+	signature := computeHmac256(c.cfg, queryStr)
 	req.URL.RawQuery = fmt.Sprintf("%s&signature=%s", getSortedQuery(query, timestamp, true), signature)
 
 	req.Header.Set("X-BX-APIKEY", c.cfg.Exchange.BingX.APIKey)

@@ -40,7 +40,7 @@ func (c *Client) CreateOrder(ctx context.Context, order models.Order) (*models.O
 
 	query := mapRequestDataToOrderDTO(&order, timestamp)
 	queryStr := getSortedQuery(query, timestamp, false)
-	signature := c.computeHmac256(queryStr)
+	signature := computeHmac256(c.cfg, queryStr)
 	req.URL.RawQuery = fmt.Sprintf("%s&signature=%s", getSortedQuery(query, timestamp, true), signature)
 
 	req.Header.Set("X-BX-APIKEY", c.cfg.Exchange.BingX.APIKey)
