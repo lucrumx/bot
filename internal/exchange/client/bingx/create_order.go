@@ -20,10 +20,11 @@ import (
 
 const orderURL = "/openApi/swap/v2/trade/order/test"
 
-// CreateOrder creates an order on the exchange.
-func (c *Client) CreateOrder(ctx context.Context, order models.Order) (*models.Order, error) {
-	if err := validateBeforeCreateOrder(&order); err != nil {
-		return nil, err
+// CreateOrder sends a market order to the exchange.
+// On success, mutates order: sets ExchangeOrderID, ExchangeName, Status, RawResponse.
+func (c *Client) CreateOrder(ctx context.Context, order *models.Order) error {
+	if err := validateBeforeCreateOrder(order); err != nil {
+		return err
 	}
 
 	req, err := http.NewRequestWithContext(
@@ -33,12 +34,12 @@ func (c *Client) CreateOrder(ctx context.Context, order models.Order) (*models.O
 		nil)
 
 	if err != nil {
-		return nil, fmt.Errorf("BingX client failed to create request: %w", err)
+		return fmt.Errorf("BingX client failed to create request: %w", err)
 	}
 
 	timestamp := time.Now().UnixMilli()
 
-	query := mapRequestDataToOrderDTO(&order, timestamp)
+	query := mapRequestDataToOrderDTO(order, timestamp)
 	queryStr := getSortedQuery(query, timestamp, false)
 	signature := computeHmac256(c.cfg, queryStr)
 	req.URL.RawQuery = fmt.Sprintf("%s&signature=%s", getSortedQuery(query, timestamp, true), signature)
@@ -47,38 +48,37 @@ func (c *Client) CreateOrder(ctx context.Context, order models.Order) (*models.O
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("BingX client http create order request failed: %w", err)
+		return fmt.Errorf("BingX client http create order request failed: %w", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("BingX client unexpected http while creating order, status code: %d", resp.StatusCode)
+		return fmt.Errorf("BingX client unexpected http while creating order, status code: %d", resp.StatusCode)
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("BingX client failed to read create order response body: %w", err)
+		return fmt.Errorf("BingX client failed to read create order response body: %w", err)
 	}
 
 	var raw dtos.OrderCreateResponseDTO
 
 	if err := json.Unmarshal(body, &raw); err != nil {
-		return nil, fmt.Errorf("BingX client failed to unmarshal create order response: %w", err)
+		return fmt.Errorf("BingX client failed to unmarshal create order response: %w", err)
 	}
 
 	if raw.Code != 0 {
-		return nil, fmt.Errorf("BingX client failed to create order, code: %d, msg: %s", raw.Code, raw.Msg)
+		return fmt.Errorf("BingX client failed to create order, code: %d, msg: %s", raw.Code, raw.Msg)
 	}
 
-	confirmedOrder := order
-	confirmedOrder.ExchangeName = c.GetExchangeName()
+	order.ExchangeName = c.GetExchangeName()
 	if raw.Data.Order.OrderID > 0 {
-		confirmedOrder.ExchangeOrderID = strconv.FormatInt(raw.Data.Order.OrderID, 10)
+		order.ExchangeOrderID = strconv.FormatInt(raw.Data.Order.OrderID, 10)
 	}
-	confirmedOrder.RawResponse = string(body)
-	confirmedOrder.Status = models.OrderStatusPending
+	order.RawResponse = string(body)
+	order.Status = models.OrderStatusPending
 
-	return &confirmedOrder, nil
+	return nil
 }
 
 func validateBeforeCreateOrder(order *models.Order) error {

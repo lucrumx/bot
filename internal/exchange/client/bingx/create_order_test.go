@@ -68,15 +68,15 @@ func Test_CreateOrder_Integration(t *testing.T) {
 		Quantity: decimal.NewFromInt(1),
 	}
 
-	confirmedOrder, err := bingx.CreateOrder(ctx, order)
+	err := bingx.CreateOrder(ctx, &order)
 
 	assert.NoError(t, err)
-	assert.NotNil(t, confirmedOrder)
-	assert.Equal(t, order.ID, confirmedOrder.ID)
-	assert.Equal(t, bingx.GetExchangeName(), confirmedOrder.ExchangeName)
-	assert.Equal(t, "987654321", confirmedOrder.ExchangeOrderID)
-	assert.Equal(t, models.OrderStatusPending, confirmedOrder.Status)
-	assert.NotEmpty(t, confirmedOrder.RawResponse)
+	assert.NotNil(t, order)
+	assert.Equal(t, order.ID, order.ID)
+	assert.Equal(t, bingx.GetExchangeName(), order.ExchangeName)
+	assert.Equal(t, "987654321", order.ExchangeOrderID)
+	assert.Equal(t, models.OrderStatusPending, order.Status)
+	assert.NotEmpty(t, order.RawResponse)
 }
 
 func Test_CreateOrder_ValidateBeforeCreate(t *testing.T) {
