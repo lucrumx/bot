@@ -21,7 +21,7 @@ var mexcAliasesReverse = map[string]string{
 }
 
 func normalizeTickerName(symbol string) string {
-	if strings.Contains(symbol, "_USDT") {
+	if strings.HasSuffix(symbol, "_USDT") {
 		symbol = strings.TrimSuffix(symbol, "_USDT") + "USDT"
 	}
 
