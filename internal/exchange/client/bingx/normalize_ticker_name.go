@@ -11,7 +11,7 @@ func normalizeTickerName(symbol string) string {
 }
 
 func denormalizeTickerName(symbol string) string {
-	if !strings.Contains(symbol, "-USDT") {
+	if !strings.Contains(symbol, "USDT") {
 		symbol = strings.TrimSuffix(symbol, "USDT") + "-USDT"
 	}
 

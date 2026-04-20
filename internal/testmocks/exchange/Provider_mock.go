@@ -40,6 +40,74 @@ func (_m *MockProvider) EXPECT() *MockProvider_Expecter {
 	return &MockProvider_Expecter{mock: &_m.Mock}
 }
 
+// CloseOrder provides a mock function for the type MockProvider
+func (_mock *MockProvider) CloseOrder(ctx context.Context, order models.Order) (*models.Order, error) {
+	ret := _mock.Called(ctx, order)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CloseOrder")
+	}
+
+	var r0 *models.Order
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, models.Order) (*models.Order, error)); ok {
+		return returnFunc(ctx, order)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, models.Order) *models.Order); ok {
+		r0 = returnFunc(ctx, order)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*models.Order)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, models.Order) error); ok {
+		r1 = returnFunc(ctx, order)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockProvider_CloseOrder_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CloseOrder'
+type MockProvider_CloseOrder_Call struct {
+	*mock.Call
+}
+
+// CloseOrder is a helper method to define mock.On call
+//   - ctx context.Context
+//   - order models.Order
+func (_e *MockProvider_Expecter) CloseOrder(ctx interface{}, order interface{}) *MockProvider_CloseOrder_Call {
+	return &MockProvider_CloseOrder_Call{Call: _e.mock.On("CloseOrder", ctx, order)}
+}
+
+func (_c *MockProvider_CloseOrder_Call) Run(run func(ctx context.Context, order models.Order)) *MockProvider_CloseOrder_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 models.Order
+		if args[1] != nil {
+			arg1 = args[1].(models.Order)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockProvider_CloseOrder_Call) Return(order1 *models.Order, err error) *MockProvider_CloseOrder_Call {
+	_c.Call.Return(order1, err)
+	return _c
+}
+
+func (_c *MockProvider_CloseOrder_Call) RunAndReturn(run func(ctx context.Context, order models.Order) (*models.Order, error)) *MockProvider_CloseOrder_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // CreateOrder provides a mock function for the type MockProvider
 func (_mock *MockProvider) CreateOrder(ctx context.Context, order models.Order) (*models.Order, error) {
 	ret := _mock.Called(ctx, order)
