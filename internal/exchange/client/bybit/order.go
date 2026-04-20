@@ -31,13 +31,42 @@ func (c *Client) CreateOrder(ctx context.Context, order *models.Order) error {
 		return err
 	}
 
+	return c.submitOrder(ctx, order, mapRequestDataToOrderDTO(order))
+}
+
+// CloseOrder closes an existing position by placing a reduce-only order in the opposite direction.
+func (c *Client) CloseOrder(ctx context.Context, order *models.Order) error {
+	// flip side to close the position
+	side := dtos.OrderSideSell
+	if order.Side == models.OrderSideSell {
+		side = dtos.OrderSideBuy
+	}
+
+	market := "linear"
+	if order.Market == models.OrderMarketSpot {
+		market = "spot"
+	}
+
+	payload := map[string]interface{}{
+		"category":    market,
+		"symbol":      order.Symbol,
+		"side":        string(side),
+		"orderType":   string(dtos.OrderTypeMarket),
+		"qty":         order.Quantity.String(),
+		"orderLinkId": order.ID.String(),
+		"reduceOnly":  true,
+	}
+
+	return c.submitOrder(ctx, order, payload)
+}
+
+func (c *Client) submitOrder(ctx context.Context, order *models.Order, payload map[string]interface{}) error {
 	apiKey := c.cfg.Exchange.ByBit.APIKey
 	recvWindow := strconv.FormatInt(c.cfg.Exchange.ByBit.RecvWindow, 10)
 
-	payload := mapRequestDataToOrderDTO(order)
 	bodyBytes, err := json.Marshal(payload)
 	if err != nil {
-		return fmt.Errorf("ByBit client failed to marshal create order request: %w", err)
+		return fmt.Errorf("ByBit client failed to marshal order request: %w", err)
 	}
 	bodyStr := string(bodyBytes)
 	timestamp := strconv.FormatInt(time.Now().UnixMilli(), 10)
@@ -47,12 +76,7 @@ func (c *Client) CreateOrder(ctx context.Context, order *models.Order) error {
 	h.Write([]byte(signStr))
 	signature := hex.EncodeToString(h.Sum(nil))
 
-	req, err := http.NewRequestWithContext(
-		ctx,
-		http.MethodPost,
-		c.baseURL+orderURL,
-		bytes.NewBuffer(bodyBytes))
-
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+orderURL, bytes.NewBuffer(bodyBytes))
 	if err != nil {
 		return fmt.Errorf("ByBit client failed to create request: %w", err)
 	}
@@ -65,33 +89,33 @@ func (c *Client) CreateOrder(ctx context.Context, order *models.Order) error {
 
 	resp, err := c.http.Do(req)
 	if err != nil {
-		return fmt.Errorf("ByBit client http create order request failed: %w", err)
+		return fmt.Errorf("ByBit client http order request failed: %w", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return fmt.Errorf("ByBit client failed to read create order response body: %w", err)
+		return fmt.Errorf("ByBit client failed to read order response body: %w", err)
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("ByBit client unexpected http while creating order, status code: %d, body: %s", resp.StatusCode, string(body))
+		return fmt.Errorf("ByBit client unexpected http status %d: %s", resp.StatusCode, string(body))
 	}
 
 	var raw dtos.OrderCreateResponseDTO
-
 	if err := json.Unmarshal(body, &raw); err != nil {
-		return fmt.Errorf("ByBit client failed to unmarshal create order response: %w", err)
+		return fmt.Errorf("ByBit client failed to unmarshal order response: %w", err)
 	}
 
 	if raw.RetCode != 0 {
-		return fmt.Errorf("ByBit client failed to create order, code: %d, msg: %s", raw.RetCode, raw.RetMsg)
+		return fmt.Errorf("ByBit client order failed, code: %d, msg: %s", raw.RetCode, raw.RetMsg)
 	}
 
-	order.ExchangeName = c.GetExchangeName()
-	order.ExchangeOrderID = raw.Result.OrderID
-	order.RawResponse = string(body)
-	order.Status = models.OrderStatusNew
+	confirmed := order
+	confirmed.ExchangeName = c.GetExchangeName()
+	confirmed.ExchangeOrderID = raw.Result.OrderID
+	confirmed.RawResponse = string(body)
+	confirmed.Status = models.OrderStatusNew
 
 	return nil
 }

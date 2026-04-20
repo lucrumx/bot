@@ -25,6 +25,11 @@ exchange:
     ws_private_swap_url: "wss://open-api-swap.bingx.com/swap-market"
     api_key: "your-api-key-here"
     api_secret: "your-api-secret-here"
+  mexc:
+    api_base_url: "https://contract.mexc.com"
+    ws_url: "wss://contract.mexc.com/edge"
+    api_key: "your-api-key-here"
+    api_secret: "your-api-secret-here"
   ws_client:
     buffer_size: 5000
   bot:

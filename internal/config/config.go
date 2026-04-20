@@ -101,6 +101,13 @@ func loadFromEnv(cfg *Config, logger zerolog.Logger) error {
 		APISecret:        utils.GetEnv("BINGX_API_SECRET", ""),
 	}
 
+	mexc := MEXCConfig{
+		APIBaseURL: utils.GetEnv("MEXC_API_BASE_URL", ""),
+		WSUrl:      utils.GetEnv("MEXC_WS_URL", ""),
+		APIKey:     utils.GetEnv("MEXC_API_KEY", ""),
+		APISecret:  utils.GetEnv("MEXC_API_SECRET", ""),
+	}
+
 	wsClientBufferSize, err := strconv.Atoi(utils.GetEnv("WS_CLIENT_BUFFER_SIZE", "5000"))
 	if err != nil {
 		return raiseErrorEnv("WS_CLIENT_BUFFER_SIZE")
@@ -175,6 +182,7 @@ func loadFromEnv(cfg *Config, logger zerolog.Logger) error {
 	cfg.Exchange = ExchangeConfig{
 		ByBit: byBit,
 		BingX: bingX,
+		MEXC:  mexc,
 		WsClient: WsClientConfig{
 			BufferSize: wsClientBufferSize,
 		},
@@ -254,6 +262,17 @@ func validateConfig(cfg *Config) error {
 	}
 	if cfg.Exchange.ByBit.RecvWindow == 0 {
 		cfg.Exchange.ByBit.RecvWindow = 5000
+	}
+
+	// MEXC
+	if cfg.Exchange.MEXC.APIBaseURL == "" {
+		return raiseErrorYAML("Exchange.MEXC.APIBaseURL")
+	}
+	if cfg.Exchange.MEXC.APIKey == "" {
+		return raiseErrorYAML("Exchange.MEXC.APIKey")
+	}
+	if cfg.Exchange.MEXC.APISecret == "" {
+		return raiseErrorYAML("Exchange.MEXC.APISecret")
 	}
 
 	// BingX
