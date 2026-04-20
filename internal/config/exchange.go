@@ -27,6 +27,15 @@ type BingXConfig struct {
 	APISecret        string `yaml:"api_secret"`
 }
 
+// MEXCConfig contains configuration for MEXC exchange.
+type MEXCConfig struct {
+	APIBaseURL string `yaml:"api_base_url"`
+	WSUrl      string `yaml:"ws_url"`
+	//WSPrivateSwapURL string `yaml:"ws_private_swap_url"`
+	APIKey    string `yaml:"api_key"`
+	APISecret string `yaml:"api_secret"`
+}
+
 // BotConfig contains configuration for the bot.
 type BotConfig struct {
 	CheckInterval         time.Duration `yaml:"check_interval"`
@@ -63,6 +72,7 @@ type ManipulationBotConfig struct {
 type ExchangeConfig struct {
 	ByBit           ByBitConfig           `yaml:"bybit"`
 	BingX           BingXConfig           `yaml:"bingx"`
+	MEXC            MEXCConfig            `yaml:"mexc"`
 	WsClient        WsClientConfig        `yaml:"ws_client"`
 	Bot             BotConfig             `yaml:"bot"`
 	ArbitrageBot    ArbitrageBotConfig    `yaml:"arbitration_bot"`

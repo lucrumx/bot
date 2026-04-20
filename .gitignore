@@ -39,3 +39,5 @@ config.yaml
 
 #*.md
 !README.md
+
+.zed
