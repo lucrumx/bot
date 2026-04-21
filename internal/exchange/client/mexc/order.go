@@ -29,9 +29,9 @@ const (
 )
 
 // CreateOrder creates an order on the MEXC exchange.
-func (c *Client) CreateOrder(ctx context.Context, order models.Order) (*models.Order, error) {
-	if err := validateOrder(&order); err != nil {
-		return nil, err
+func (c *Client) CreateOrder(ctx context.Context, order *models.Order) error {
+	if err := validateOrder(order); err != nil {
+		return err
 	}
 
 	side := mexcSideOpenLong
@@ -43,9 +43,9 @@ func (c *Client) CreateOrder(ctx context.Context, order models.Order) (*models.O
 }
 
 // CloseOrder closes an existing position on the MEXC exchange.
-func (c *Client) CloseOrder(ctx context.Context, order models.Order) (*models.Order, error) {
-	if err := validateOrder(&order); err != nil {
-		return nil, err
+func (c *Client) CloseOrder(ctx context.Context, order *models.Order) error {
+	if err := validateOrder(order); err != nil {
+		return err
 	}
 
 	// Buy means we had a long position → close long (side=4)
@@ -58,7 +58,7 @@ func (c *Client) CloseOrder(ctx context.Context, order models.Order) (*models.Or
 	return c.submitOrder(ctx, order, side)
 }
 
-func (c *Client) submitOrder(ctx context.Context, order models.Order, side int) (*models.Order, error) {
+func (c *Client) submitOrder(ctx context.Context, order *models.Order, side int) error {
 	payload := map[string]interface{}{
 		"symbol":      denormalizeTickerName(order.Symbol),
 		"price":       0,
@@ -71,29 +71,29 @@ func (c *Client) submitOrder(ctx context.Context, order models.Order, side int) 
 
 	bodyBytes, err := json.Marshal(payload)
 	if err != nil {
-		return nil, fmt.Errorf("MEXC | submitOrder: failed to marshal request: %w", err)
+		return fmt.Errorf("MEXC | submitOrder: failed to marshal request: %w", err)
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/api/v1/private/order/submit", bytes.NewBuffer(bodyBytes))
 	if err != nil {
-		return nil, fmt.Errorf("MEXC | submitOrder: failed to create request: %w", err)
+		return fmt.Errorf("MEXC | submitOrder: failed to create request: %w", err)
 	}
 
 	setSignedHeaders(req, c.cfg.Exchange.MEXC.APIKey, c.cfg.Exchange.MEXC.APISecret, string(bodyBytes))
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("MEXC | submitOrder: http request failed: %w", err)
+		return fmt.Errorf("MEXC | submitOrder: http request failed: %w", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("MEXC | submitOrder: failed to read response body: %w", err)
+		return fmt.Errorf("MEXC | submitOrder: failed to read response body: %w", err)
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("MEXC | submitOrder: unexpected status %d: %s", resp.StatusCode, string(body))
+		return fmt.Errorf("MEXC | submitOrder: unexpected status %d: %s", resp.StatusCode, string(body))
 	}
 
 	var raw struct {
@@ -105,11 +105,11 @@ func (c *Client) submitOrder(ctx context.Context, order models.Order, side int) 
 	}
 
 	if err := json.Unmarshal(body, &raw); err != nil {
-		return nil, fmt.Errorf("MEXC | submitOrder: failed to unmarshal response: %w", err)
+		return fmt.Errorf("MEXC | submitOrder: failed to unmarshal response: %w", err)
 	}
 
 	if !raw.Success || raw.Code != 0 {
-		return nil, fmt.Errorf("MEXC | submitOrder: API error, success: %t, code: %d, body: %s", raw.Success, raw.Code, string(body))
+		return fmt.Errorf("MEXC | submitOrder: API error, success: %t, code: %d, body: %s", raw.Success, raw.Code, string(body))
 	}
 
 	confirmed := order
@@ -118,7 +118,7 @@ func (c *Client) submitOrder(ctx context.Context, order models.Order, side int) 
 	confirmed.RawResponse = string(body)
 	confirmed.Status = models.OrderStatusNew
 
-	return &confirmed, nil
+	return nil
 }
 
 func validateOrder(order *models.Order) error {
