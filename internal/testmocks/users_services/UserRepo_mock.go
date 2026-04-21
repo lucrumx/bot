@@ -5,9 +5,8 @@
 package users_services
 
 import (
-	mock "github.com/stretchr/testify/mock"
-
 	"github.com/lucrumx/bot/internal/models"
+	mock "github.com/stretchr/testify/mock"
 )
 
 // NewMockUserRepo creates a new instance of MockUserRepo. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
