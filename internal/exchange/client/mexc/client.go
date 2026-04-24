@@ -19,6 +19,11 @@ type Client struct {
 	cfg          *config.Config
 	logger       zerolog.Logger
 	wsManager    *exchange.WSManager
+	//
+	createOrderURL string
+	//
+	wsPrivate        *WsPrivateClient
+	wsPrivateStarted bool
 }
 
 // NewClient constructor.
@@ -32,6 +37,7 @@ func NewClient(cfg *config.Config, logger zerolog.Logger) *Client {
 		wsManager: exchange.NewWSManager(cfg, func(c *config.Config) exchange.WsClient {
 			return newWsClient(c, logger)
 		}),
+		createOrderURL: cfg.Exchange.MEXC.APIBaseURL + createOrderURL,
 	}
 }
 
@@ -45,7 +51,14 @@ func (c *Client) SubscribeTrades(ctx context.Context, symbols []string, category
 	return c.wsManager.SubscribeTrades(ctx, symbols, category)
 }
 
-// SubscribeExecutions is not yet implemented for MEXC.
-func (c *Client) SubscribeExecutions(_ context.Context) (<-chan exchange.OrderExecutionEvent, error) {
-	return nil, nil
+// SubscribeExecutions subscribes to order execution events via private WebSocket.
+func (c *Client) SubscribeExecutions(ctx context.Context) (<-chan exchange.OrderExecutionEvent, error) {
+	if !c.wsPrivateStarted {
+		c.wsPrivate = NewWsPrivateClient(c.cfg, c.logger)
+		if err := c.wsPrivate.Start(ctx); err != nil {
+			return nil, err
+		}
+		c.wsPrivateStarted = true
+	}
+	return c.wsPrivate.SubscribeToExecutions()
 }

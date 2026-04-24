@@ -38,9 +38,13 @@ func (c *Client) GetTickers(ctx context.Context, symbols []string, category exch
 		return nil, fmt.Errorf("ByBit client failed to create request: %w", err)
 	}
 
+	if len(symbols) > 1 {
+		return nil, fmt.Errorf("ByBit client only supports 1 symbol at a time")
+	}
+
 	q := req.URL.Query()
 	if len(symbols) > 0 {
-		q.Set("symbols", strings.Join(symbols, ","))
+		q.Set("symbol", strings.Join(symbols, ","))
 	}
 	q.Set("category", string(category))
 	req.URL.RawQuery = q.Encode()

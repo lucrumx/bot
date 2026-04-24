@@ -20,20 +20,21 @@ import (
 
 const orderURL = "/openApi/swap/v2/trade/order/test"
 
-// CreateOrder creates an order on the exchange.
-func (c *Client) CreateOrder(ctx context.Context, order models.Order) (*models.Order, error) {
-	if err := validateBeforeCreateOrder(&order); err != nil {
-		return nil, err
+// CreateOrder sends a market order to the exchange.
+// On success, mutates order: sets ExchangeOrderID, ExchangeName, Status, RawResponse.
+func (c *Client) CreateOrder(ctx context.Context, order *models.Order) error {
+	if err := validateBeforeCreateOrder(order); err != nil {
+		return err
 	}
 
 	timestamp := time.Now().UnixMilli()
-	return c.submitOrder(ctx, order, mapRequestDataToOrderDTO(&order, timestamp), timestamp)
+	return c.submitOrder(ctx, order, mapRequestDataToOrderDTO(order, timestamp), timestamp)
 }
 
 // CloseOrder closes an existing position by placing an order in the opposite direction with the same positionSide.
-func (c *Client) CloseOrder(ctx context.Context, order models.Order) (*models.Order, error) {
-	if err := validateBeforeCreateOrder(&order); err != nil {
-		return nil, err
+func (c *Client) CloseOrder(ctx context.Context, order *models.Order) error {
+	if err := validateBeforeCreateOrder(order); err != nil {
+		return err
 	}
 
 	// flip side, keep positionSide — this closes the position
@@ -58,10 +59,10 @@ func (c *Client) CloseOrder(ctx context.Context, order models.Order) (*models.Or
 	return c.submitOrder(ctx, order, query, timestamp)
 }
 
-func (c *Client) submitOrder(ctx context.Context, order models.Order, query map[string]string, timestamp int64) (*models.Order, error) {
+func (c *Client) submitOrder(ctx context.Context, order *models.Order, query map[string]string, timestamp int64) error {
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+orderURL, nil)
 	if err != nil {
-		return nil, fmt.Errorf("BingX client failed to create request: %w", err)
+		return fmt.Errorf("BingX client failed to create request: %w", err)
 	}
 
 	queryStr := getSortedQuery(query, timestamp, false)
@@ -71,26 +72,26 @@ func (c *Client) submitOrder(ctx context.Context, order models.Order, query map[
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("BingX client http order request failed: %w", err)
+		return fmt.Errorf("BingX client http order request failed: %w", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("BingX client unexpected http status: %d", resp.StatusCode)
+		return fmt.Errorf("BingX client unexpected http status: %d", resp.StatusCode)
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("BingX client failed to read order response body: %w", err)
+		return fmt.Errorf("BingX client failed to read order response body: %w", err)
 	}
 
 	var raw dtos.OrderCreateResponseDTO
 	if err := json.Unmarshal(body, &raw); err != nil {
-		return nil, fmt.Errorf("BingX client failed to unmarshal order response: %w", err)
+		return fmt.Errorf("BingX client failed to unmarshal order response: %w", err)
 	}
 
 	if raw.Code != 0 {
-		return nil, fmt.Errorf("BingX client order failed, code: %d, msg: %s", raw.Code, raw.Msg)
+		return fmt.Errorf("BingX client order failed, code: %d, msg: %s", raw.Code, raw.Msg)
 	}
 
 	confirmed := order
@@ -101,7 +102,7 @@ func (c *Client) submitOrder(ctx context.Context, order models.Order, query map[
 	confirmed.RawResponse = string(body)
 	confirmed.Status = models.OrderStatusPending
 
-	return &confirmed, nil
+	return nil
 }
 
 func validateBeforeCreateOrder(order *models.Order) error {

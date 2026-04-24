@@ -3,6 +3,8 @@ package dtos
 // TickerDTO represents a ticker data transfer object.
 type TickerDTO struct {
 	Symbol            string  `json:"symbol"`
+	DisplayName       string  `json:"displayName"`
+	Size              string  `json:"size"`
 	QuantityPrecision int64   `json:"quantityPrecision"`
 	PricePrecision    int64   `json:"pricePrecision"`
 	MakerFeeRate      float64 `json:"makerFeeRate"`
