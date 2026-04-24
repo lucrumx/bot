@@ -19,14 +19,16 @@ type signalHandler struct {
 	notif    notifier.Notifier
 	logger   zerolog.Logger
 	repo     ArbitrageSpreadRepository
+	engine   *ExecutionEngine
 	signalCh chan *SpreadEvent
 }
 
-func newSignalHandler(notif notifier.Notifier, logger zerolog.Logger, repo ArbitrageSpreadRepository) *signalHandler {
+func newSignalHandler(notif notifier.Notifier, logger zerolog.Logger, repo ArbitrageSpreadRepository, engine *ExecutionEngine) *signalHandler {
 	return &signalHandler{
 		notif:    notif,
 		logger:   logger,
 		repo:     repo,
+		engine:   engine,
 		signalCh: make(chan *SpreadEvent, 1000),
 	}
 }
@@ -56,6 +58,8 @@ func (s *signalHandler) handleSignal(se []*SpreadEvent) {
 }
 
 func (s *signalHandler) handleNewSpreadEvent(ctx context.Context, e *SpreadEvent) {
+	s.engine.Open(ctx, e)
+
 	spreadStr := strconv.FormatFloat(e.FromSpreadPercent, 'f', 2, 64)
 
 	s.logger.Warn().
@@ -80,20 +84,22 @@ func (s *signalHandler) handleNewSpreadEvent(ctx context.Context, e *SpreadEvent
 		s.logger.Warn().Err(err).Msg("failed to send telegram notification")
 	}
 
-	err := s.repo.Create(ctx, &models.ArbitrageSpread{
-		Symbol:           e.Symbol,
-		BuyOnExchange:    e.BuyOnExchange,
-		SellOnExchange:   e.SellOnExchange,
-		BuyPrice:         decimal.NewFromFloat(e.BuyPrice),
-		SellPrice:        decimal.NewFromFloat(e.SellPrice),
-		SpreadPercent:    decimal.NewFromFloat(e.FromSpreadPercent),
-		MaxSpreadPercent: decimal.NewFromFloat(e.MaxSpreadPercent),
-		Status:           e.Status,
-	})
-	if err != nil {
-		s.logger.Warn().Err(err).Msgf("failed to create arbitrage spread, symbol: %s, buy on: %s, sell on: %s",
-			e.Symbol, e.BuyOnExchange, e.SellOnExchange)
-	}
+	go func() {
+		err := s.repo.Create(ctx, &models.ArbitrageSpread{
+			Symbol:           e.Symbol,
+			BuyOnExchange:    e.BuyOnExchange,
+			SellOnExchange:   e.SellOnExchange,
+			BuyPrice:         decimal.NewFromFloat(e.BuyPrice),
+			SellPrice:        decimal.NewFromFloat(e.SellPrice),
+			SpreadPercent:    decimal.NewFromFloat(e.FromSpreadPercent),
+			MaxSpreadPercent: decimal.NewFromFloat(e.MaxSpreadPercent),
+			Status:           e.Status,
+		})
+		if err != nil {
+			s.logger.Warn().Err(err).Msgf("failed to create arbitrage spread, symbol: %s, buy on: %s, sell on: %s",
+				e.Symbol, e.BuyOnExchange, e.SellOnExchange)
+		}
+	}()
 
 }
 
@@ -133,24 +139,28 @@ func (s *signalHandler) handleNewSpreadUpdate(ctx context.Context, e *SpreadEven
 		s.logger.Warn().Err(err).Msg("failed to send telegram notification")
 	}
 
-	err := s.repo.Update(ctx, &models.ArbitrageSpread{
-		Status:           models.ArbitrageSpreadUpdated,
-		MaxSpreadPercent: decimal.NewFromFloat(e.MaxSpreadPercent),
-		UpdatedAt:        time.Now(),
-	}, FindFilter{
-		Symbol: e.Symbol,
-		BuyEx:  e.BuyOnExchange,
-		SellEx: e.SellOnExchange,
-		Status: []models.ArbitrageSpreadStatus{models.ArbitrageSpreadOpened, models.ArbitrageSpreadUpdated},
-	})
-	if err != nil {
-		s.logger.Warn().Err(err).Msgf("failed to update arbitrage spread, symbol: %s, buy exchange: %s, sell exchange: %s",
-			e.Symbol, e.BuyOnExchange, e.SellOnExchange)
-	}
+	go func() {
+		err := s.repo.Update(ctx, &models.ArbitrageSpread{
+			Status:           models.ArbitrageSpreadUpdated,
+			MaxSpreadPercent: decimal.NewFromFloat(e.MaxSpreadPercent),
+			UpdatedAt:        time.Now(),
+		}, FindFilter{
+			Symbol: e.Symbol,
+			BuyEx:  e.BuyOnExchange,
+			SellEx: e.SellOnExchange,
+			Status: []models.ArbitrageSpreadStatus{models.ArbitrageSpreadOpened, models.ArbitrageSpreadUpdated},
+		})
+		if err != nil {
+			s.logger.Warn().Err(err).Msgf("failed to update arbitrage spread, symbol: %s, buy exchange: %s, sell exchange: %s",
+				e.Symbol, e.BuyOnExchange, e.SellOnExchange)
+		}
+	}()
 
 }
 
 func (s *signalHandler) handleNewSpreadClose(ctx context.Context, e *SpreadEvent) {
+	s.engine.Close(ctx, e)
+
 	s.logger.Warn().
 		Str("pair", e.Symbol).
 		Msg("🔥 SPREAD CLOSED")
@@ -165,17 +175,19 @@ func (s *signalHandler) handleNewSpreadClose(ctx context.Context, e *SpreadEvent
 		s.logger.Warn().Err(err).Msg("failed to send telegram notification")
 	}
 
-	err := s.repo.Update(ctx, &models.ArbitrageSpread{
-		Status:    models.ArbitrageSpreadClosed,
-		UpdatedAt: time.Now(),
-	}, FindFilter{
-		Symbol: e.Symbol,
-		BuyEx:  e.BuyOnExchange,
-		SellEx: e.SellOnExchange,
-		Status: []models.ArbitrageSpreadStatus{models.ArbitrageSpreadOpened, models.ArbitrageSpreadUpdated},
-	})
-	if err != nil {
-		s.logger.Warn().Err(err).Msgf("failed to update arbitrage spread, symbol: %s, buy exchange: %s, sell exchange: %s",
-			e.Symbol, e.BuyOnExchange, e.SellOnExchange)
-	}
+	go func() {
+		err := s.repo.Update(ctx, &models.ArbitrageSpread{
+			Status:    models.ArbitrageSpreadClosed,
+			UpdatedAt: time.Now(),
+		}, FindFilter{
+			Symbol: e.Symbol,
+			BuyEx:  e.BuyOnExchange,
+			SellEx: e.SellOnExchange,
+			Status: []models.ArbitrageSpreadStatus{models.ArbitrageSpreadOpened, models.ArbitrageSpreadUpdated},
+		})
+		if err != nil {
+			s.logger.Warn().Err(err).Msgf("failed to update arbitrage spread, symbol: %s, buy exchange: %s, sell exchange: %s",
+				e.Symbol, e.BuyOnExchange, e.SellOnExchange)
+		}
+	}()
 }

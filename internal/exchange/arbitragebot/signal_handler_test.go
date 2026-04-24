@@ -37,7 +37,8 @@ func TestFormatPrice_PreservesLowPricePrecision(t *testing.T) {
 
 func TestSignalHandler_HandleNewSpreadEvent_ShowsDistinctLowPrices(t *testing.T) {
 	notif := &notifierStub{}
-	handler := newSignalHandler(notif, zerolog.Nop(), &repoStub{})
+	engine := newExecutionEngine(nil, newInstrumentCache(), zerolog.Nop())
+	handler := newSignalHandler(notif, zerolog.Nop(), &repoStub{}, engine)
 
 	handler.handleNewSpreadEvent(context.Background(), &SpreadEvent{
 		Status:            models.ArbitrageSpreadOpened,

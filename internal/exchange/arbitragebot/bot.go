@@ -19,12 +19,12 @@ import (
 
 // ArbitrageBot represents a bot engine.
 type ArbitrageBot struct {
-	logger  zerolog.Logger
-	clients []exchange.Provider
-	// executor *ExecutionEngine order processing
-	cfg           *config.Config
-	tradeCount    int64
-	signalHandler *signalHandler
+	logger          zerolog.Logger
+	clients         []exchange.Provider
+	cfg             *config.Config
+	tradeCount      int64
+	signalHandler   *signalHandler
+	executionEngine *ExecutionEngine
 }
 
 // NewBot creates a new Bot (constructor).
@@ -34,12 +34,16 @@ func NewBot(
 	cfg *config.Config,
 	notify notifier.Notifier,
 	arbitrageSpreadRepo ArbitrageSpreadRepository,
+	orderRepo OrderRepository,
 ) *ArbitrageBot {
+	cache := newInstrumentCache()
+	engine := newExecutionEngine(clients, cache, orderRepo, logger)
 	return &ArbitrageBot{
-		logger:        logger,
-		clients:       clients,
-		cfg:           cfg,
-		signalHandler: newSignalHandler(notify, logger, arbitrageSpreadRepo),
+		logger:          logger,
+		clients:         clients,
+		cfg:             cfg,
+		executionEngine: engine,
+		signalHandler:   newSignalHandler(notify, logger, arbitrageSpreadRepo, engine),
 	}
 }
 
@@ -104,6 +108,15 @@ func (a *ArbitrageBot) Run(ctx context.Context) error {
 	}()
 
 	// END BALANCES
+
+	if err := a.executionEngine.instrumentCache.Load(ctx, a.clients); err != nil {
+		return fmt.Errorf("failed to load instrument cache: %w", err)
+	}
+	a.logger.Info().Msg("instrument cache loaded")
+
+	if err := a.executionEngine.ListenExecutions(ctx); err != nil {
+		return fmt.Errorf("failed to subscribe to executions: %w", err)
+	}
 
 	uniq, notUniqName, uniqNames := checkUniqClient(a.clients)
 	if !uniq {
