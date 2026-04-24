@@ -10,6 +10,7 @@ import (
 
 	"github.com/lucrumx/bot/internal/config"
 	"github.com/lucrumx/bot/internal/exchange"
+	"github.com/lucrumx/bot/internal/utils/testutils"
 )
 
 func Test_GetTickers(t *testing.T) {
@@ -31,6 +32,13 @@ func Test_GetTickers(t *testing.T) {
 	moexc := NewClient(&cfg, logger)
 
 	tickers, err := moexc.GetTickers(ctx, []string{}, exchange.CategoryLinear)
+	testutils.PrintStruct(t, tickers, "tickers")
+	require.NoError(t, err)
+	require.NotNil(t, tickers)
+	require.NotEmpty(t, tickers)
+
+	tickers, err = moexc.GetTickers(ctx, []string{"TONUSDT"}, exchange.CategoryLinear)
+	testutils.PrintStruct(t, tickers, "ticker")
 	require.NoError(t, err)
 	require.NotNil(t, tickers)
 	require.NotEmpty(t, tickers)

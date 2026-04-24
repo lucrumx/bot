@@ -6,11 +6,13 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/lucrumx/bot/internal/config"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
+
+	"github.com/lucrumx/bot/internal/config"
 )
 
+// LoadTestConfig load local config.yaml to Config
 func LoadTestConfig(t *testing.T) *config.Config {
 	t.Helper()
 

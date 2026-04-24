@@ -8,7 +8,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/require"
 
-	"github.com/lucrumx/bot/internal/config"
+	"github.com/lucrumx/bot/internal/utils/testutils"
 )
 
 func Test_GetBalanceIntegration(t *testing.T) {
@@ -16,20 +16,12 @@ func Test_GetBalanceIntegration(t *testing.T) {
 		t.Skip("skip: set INTEGRATION_TEST=1 to run")
 	}
 
-	cfg := config.Config{
-		Exchange: config.ExchangeConfig{
-			MEXC: config.MEXCConfig{
-				APIBaseURL: "https://api.mexc.com",
-				APIKey:     "mx0vglFQVaOBJvUVWs",
-				APISecret:  "8a9b5bf00ba444029642cb72082737ac",
-			},
-		},
-	}
+	cfg := testutils.LoadTestConfig(t)
 
 	logger := zerolog.Nop()
 	ctx := t.Context()
 
-	mexc := NewClient(&cfg, logger)
+	mexc := NewClient(cfg, logger)
 
 	balance, err := mexc.GetBalances(ctx)
 

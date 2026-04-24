@@ -32,7 +32,11 @@ func (c *Client) GetTickers(ctx context.Context, symbols []string, category exch
 
 	q := req.URL.Query()
 	if len(symbols) > 0 {
-		q.Set("symbols", strings.Join(symbols, ","))
+		s := make([]string, 0, len(symbols))
+		for _, symbol := range symbols {
+			s = append(s, denormalizeTickerName(symbol))
+		}
+		q.Set("symbol", strings.Join(s, ","))
 	}
 
 	req.URL.RawQuery = q.Encode()
@@ -62,16 +66,34 @@ func (c *Client) GetTickers(ctx context.Context, symbols []string, category exch
 		return nil, fmt.Errorf("MOEXC client failed to get tickers, success: %t, code: %d", data.Success, data.Code)
 	}
 
-	result := make([]exchange.Ticker, 0, len(data.Data))
-	for _, data := range data.Data {
-		if !strings.Contains(data.Symbol, "_USDT") {
+	tickers, err := parseTickers(data.Data)
+	if err != nil {
+		return nil, fmt.Errorf("MEXC client failed to parse tickers: %w", err)
+	}
+
+	result := make([]exchange.Ticker, 0, len(tickers))
+	for _, t := range tickers {
+		if !strings.Contains(t.Symbol, "_USDT") {
 			continue
 		}
-
-		result = append(result, mapTicker(&data))
+		result = append(result, mapTicker(&t))
 	}
 
 	return result, nil
+}
+
+// parseTickers handles both array and single-object responses from MEXC ticker API.
+func parseTickers(raw json.RawMessage) ([]dtos.TickerDTO, error) {
+	var list []dtos.TickerDTO
+	if err := json.Unmarshal(raw, &list); err == nil {
+		return list, nil
+	}
+
+	var single dtos.TickerDTO
+	if err := json.Unmarshal(raw, &single); err != nil {
+		return nil, err
+	}
+	return []dtos.TickerDTO{single}, nil
 }
 
 func mapTicker(ticker *dtos.TickerDTO) exchange.Ticker {

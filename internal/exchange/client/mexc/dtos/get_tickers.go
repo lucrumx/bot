@@ -1,11 +1,14 @@
 // Package dtos contains data transfer objects for the MEXC exchange.
 package dtos
 
-// GetTickersDTO represent tickers data
+import "encoding/json"
+
+// GetTickersDTO represent tickers data.
+// Data is []TickerDTO when no symbol filter, TickerDTO when single symbol.
 type GetTickersDTO struct {
-	Success bool        `json:"success"`
-	Code    int         `json:"code"`
-	Data    []TickerDTO `json:"data"`
+	Success bool            `json:"success"`
+	Code    int             `json:"code"`
+	Data    json.RawMessage `json:"data"`
 }
 
 // TickerDTO represent ticker in mexc get ticker data array

@@ -24,6 +24,7 @@ const (
 type Provider interface {
 	GetExchangeName() string
 	GetTickers(ctx context.Context, symbols []string, category Category) ([]Ticker, error)
+	GetInstruments(ctx context.Context) (map[string]Instrument, error)
 	SubscribeTrades(ctx context.Context, symbols []string, category Category) (<-chan Trade, error)
 	CreateOrder(ctx context.Context, order *models.Order) error
 	CloseOrder(ctx context.Context, order *models.Order) error

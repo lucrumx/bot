@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
@@ -26,6 +27,8 @@ const (
 
 	// margin modes
 	mexcOpenTypeCross = 2
+
+	createOrderURL = "/api/v1/private/order/create"
 )
 
 // CreateOrder creates an order on the MEXC exchange.
@@ -66,7 +69,7 @@ func (c *Client) submitOrder(ctx context.Context, order *models.Order, side int)
 		"side":        side,
 		"type":        mexcOrderTypeMarket,
 		"openType":    mexcOpenTypeCross,
-		"externalOid": order.ID.String(),
+		"externalOid": strings.ReplaceAll(order.ID.String(), "-", ""),
 	}
 
 	bodyBytes, err := json.Marshal(payload)
@@ -74,7 +77,7 @@ func (c *Client) submitOrder(ctx context.Context, order *models.Order, side int)
 		return fmt.Errorf("MEXC | submitOrder: failed to marshal request: %w", err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/api/v1/private/order/submit", bytes.NewBuffer(bodyBytes))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.createOrderURL, bytes.NewBuffer(bodyBytes))
 	if err != nil {
 		return fmt.Errorf("MEXC | submitOrder: failed to create request: %w", err)
 	}
