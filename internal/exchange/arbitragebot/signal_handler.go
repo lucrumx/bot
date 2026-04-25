@@ -60,29 +60,31 @@ func (s *signalHandler) handleSignal(se []*SpreadEvent) {
 func (s *signalHandler) handleNewSpreadEvent(ctx context.Context, e *SpreadEvent) {
 	s.engine.Open(ctx, e)
 
-	spreadStr := strconv.FormatFloat(e.FromSpreadPercent, 'f', 2, 64)
+	go func() {
+		spreadStr := strconv.FormatFloat(e.FromSpreadPercent, 'f', 2, 64)
 
-	s.logger.Warn().
-		Str("pair", e.Symbol).
-		Str("spread", spreadStr).
-		Str("buy on", e.BuyOnExchange).
-		Str("sell on", e.SellOnExchange).
-		Msg("🔥 SPREAD DETECTED")
+		s.logger.Warn().
+			Str("pair", e.Symbol).
+			Str("spread", spreadStr).
+			Str("buy on", e.BuyOnExchange).
+			Str("sell on", e.SellOnExchange).
+			Msg("🔥 SPREAD DETECTED")
 
-	msg := fmt.Sprintf(
-		"<b>🔔 ARBITRAGE: Ticker - %s</b>\n\n"+
-			"Spread: <code>%s%%</code>\n\n"+
-			"🟢 Buy:  %s - <b>%s</b>\n"+
-			"🔴 Sell: %s - <b>%s</b>",
-		e.Symbol,
-		spreadStr,
-		e.BuyOnExchange, formatPrice(e.BuyPrice),
-		e.SellOnExchange, formatPrice(e.SellPrice),
-	)
+		msg := fmt.Sprintf(
+			"<b>🔔 ARBITRAGE: Ticker - %s</b>\n\n"+
+				"Spread: <code>%s%%</code>\n\n"+
+				"🟢 Buy:  %s - <b>%s</b>\n"+
+				"🔴 Sell: %s - <b>%s</b>",
+			e.Symbol,
+			spreadStr,
+			e.BuyOnExchange, formatPrice(e.BuyPrice),
+			e.SellOnExchange, formatPrice(e.SellPrice),
+		)
 
-	if err := s.notif.Send(msg); err != nil {
-		s.logger.Warn().Err(err).Msg("failed to send telegram notification")
-	}
+		if err := s.notif.Send(msg); err != nil {
+			s.logger.Warn().Err(err).Msg("failed to send telegram notification")
+		}
+	}()
 
 	go func() {
 		err := s.repo.Create(ctx, &models.ArbitrageSpread{
@@ -119,25 +121,28 @@ func formatPrice(price float64) string {
 }
 
 func (s *signalHandler) handleNewSpreadUpdate(ctx context.Context, e *SpreadEvent) {
-	spreadStr := strconv.FormatFloat(e.MaxSpreadPercent, 'f', 2, 64)
+	// TODO: рассмотреть возможность добирать позиции по мере роста спреда
+	go func() {
+		spreadStr := strconv.FormatFloat(e.MaxSpreadPercent, 'f', 2, 64)
 
-	s.logger.Warn().
-		Str("pair", e.Symbol).
-		Str("spread", spreadStr).
-		Str("buy on", e.BuyOnExchange).
-		Str("sell on", e.SellOnExchange).
-		Msg("🔥 SPREAD GROWING")
+		s.logger.Warn().
+			Str("pair", e.Symbol).
+			Str("spread", spreadStr).
+			Str("buy on", e.BuyOnExchange).
+			Str("sell on", e.SellOnExchange).
+			Msg("🔥 SPREAD GROWING")
 
-	msg := fmt.Sprintf(
-		"<b>🔔 ARBITRAGE: Ticker - %s</b>\n\n"+
-			"Spread is growing, new spread: <code>%s%%</code>",
-		e.Symbol,
-		spreadStr,
-	)
+		msg := fmt.Sprintf(
+			"<b>🔔 ARBITRAGE: Ticker - %s</b>\n\n"+
+				"Spread is growing, new spread: <code>%s%%</code>",
+			e.Symbol,
+			spreadStr,
+		)
 
-	if err := s.notif.Send(msg); err != nil {
-		s.logger.Warn().Err(err).Msg("failed to send telegram notification")
-	}
+		if err := s.notif.Send(msg); err != nil {
+			s.logger.Warn().Err(err).Msg("failed to send telegram notification")
+		}
+	}()
 
 	go func() {
 		err := s.repo.Update(ctx, &models.ArbitrageSpread{
@@ -161,19 +166,21 @@ func (s *signalHandler) handleNewSpreadUpdate(ctx context.Context, e *SpreadEven
 func (s *signalHandler) handleNewSpreadClose(ctx context.Context, e *SpreadEvent) {
 	s.engine.Close(ctx, e)
 
-	s.logger.Warn().
-		Str("pair", e.Symbol).
-		Msg("🔥 SPREAD CLOSED")
+	go func() {
+		s.logger.Warn().
+			Str("pair", e.Symbol).
+			Msg("🔥 SPREAD CLOSED")
 
-	msg := fmt.Sprintf(
-		"<b>🔔 ARBITRAGE: Ticker - %s</b>\n\n"+
-			"Spread closed",
-		e.Symbol,
-	)
+		msg := fmt.Sprintf(
+			"<b>🔔 ARBITRAGE: Ticker - %s</b>\n\n"+
+				"Spread closed",
+			e.Symbol,
+		)
 
-	if err := s.notif.Send(msg); err != nil {
-		s.logger.Warn().Err(err).Msg("failed to send telegram notification")
-	}
+		if err := s.notif.Send(msg); err != nil {
+			s.logger.Warn().Err(err).Msg("failed to send telegram notification")
+		}
+	}()
 
 	go func() {
 		err := s.repo.Update(ctx, &models.ArbitrageSpread{

@@ -23,14 +23,14 @@ type ExecutionEngine struct {
 }
 
 // newExecutionEngine creates a new ExecutionEngine.
-func newExecutionEngine(clients []exchange.Provider, cache *instrumentCache, orderRepo OrderRepository, logger zerolog.Logger) *ExecutionEngine {
+func newExecutionEngine(clients []exchange.Provider, instruments *instrumentCache, orderRepo OrderRepository, logger zerolog.Logger) *ExecutionEngine {
 	clientMap := make(map[string]exchange.Provider, len(clients))
 	for _, c := range clients {
 		clientMap[c.GetExchangeName()] = c
 	}
 	return &ExecutionEngine{
 		clients:         clientMap,
-		instrumentCache: cache,
+		instrumentCache: instruments,
 		orderRepo:       orderRepo,
 		logger:          logger,
 		positions:       make(map[string]*OpenPosition),
@@ -87,6 +87,7 @@ func (e *ExecutionEngine) handleExecution(ctx context.Context, event exchange.Or
 			continue
 		}
 
+		// continue to work with position only if both legs are confirmed - this means the position is officially open.
 		if !pos.bothConfirmed() {
 			continue
 		}

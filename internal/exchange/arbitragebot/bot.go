@@ -36,8 +36,8 @@ func NewBot(
 	arbitrageSpreadRepo ArbitrageSpreadRepository,
 	orderRepo OrderRepository,
 ) *ArbitrageBot {
-	cache := newInstrumentCache()
-	engine := newExecutionEngine(clients, cache, orderRepo, logger)
+	instruments := newInstrumentCache()
+	engine := newExecutionEngine(clients, instruments, orderRepo, logger)
 	return &ArbitrageBot{
 		logger:          logger,
 		clients:         clients,

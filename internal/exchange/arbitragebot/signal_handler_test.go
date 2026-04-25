@@ -6,6 +6,7 @@ import (
 
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/require"
+	"github.com/lucrumx/bot/internal/testmocks/exchange_arbitragebot"
 
 	"github.com/lucrumx/bot/internal/models"
 )
@@ -37,7 +38,7 @@ func TestFormatPrice_PreservesLowPricePrecision(t *testing.T) {
 
 func TestSignalHandler_HandleNewSpreadEvent_ShowsDistinctLowPrices(t *testing.T) {
 	notif := &notifierStub{}
-	engine := newExecutionEngine(nil, newInstrumentCache(), zerolog.Nop())
+	engine := newExecutionEngine(nil, newInstrumentCache(), exchange_arbitragebot.NewMockOrderRepository(t), zerolog.Nop())
 	handler := newSignalHandler(notif, zerolog.Nop(), &repoStub{}, engine)
 
 	handler.handleNewSpreadEvent(context.Background(), &SpreadEvent{
