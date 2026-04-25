@@ -3,10 +3,10 @@ package arbitragebot
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/require"
-	"github.com/lucrumx/bot/internal/testmocks/exchange_arbitragebot"
 
 	"github.com/lucrumx/bot/internal/models"
 )
@@ -36,12 +36,11 @@ func TestFormatPrice_PreservesLowPricePrecision(t *testing.T) {
 	require.Equal(t, "1.2345", formatPrice(1.2345))
 }
 
-func TestSignalHandler_HandleNewSpreadEvent_ShowsDistinctLowPrices(t *testing.T) {
+func TestEngine_HandleOpen_ShowsDistinctLowPrices(t *testing.T) {
 	notif := &notifierStub{}
-	engine := newExecutionEngine(nil, newInstrumentCache(), exchange_arbitragebot.NewMockOrderRepository(t), zerolog.Nop())
-	handler := newSignalHandler(notif, zerolog.Nop(), &repoStub{}, engine)
+	engine := NewEngine(nil, nil, &repoStub{}, notif, zerolog.Nop())
 
-	handler.handleNewSpreadEvent(context.Background(), &SpreadEvent{
+	engine.handleOpen(context.Background(), &SpreadEvent{
 		Status:            models.ArbitrageSpreadOpened,
 		Symbol:            "AKEUSDT",
 		BuyOnExchange:     "ByBit",
@@ -51,6 +50,8 @@ func TestSignalHandler_HandleNewSpreadEvent_ShowsDistinctLowPrices(t *testing.T)
 		FromSpreadPercent: 3.09,
 		MaxSpreadPercent:  3.09,
 	})
+
+	time.Sleep(50 * time.Millisecond) // wait for notification goroutine
 
 	require.Len(t, notif.msgs, 1)
 	require.Contains(t, notif.msgs[0], "0.00019400")

@@ -19,12 +19,11 @@ import (
 
 // ArbitrageBot represents a bot engine.
 type ArbitrageBot struct {
-	logger          zerolog.Logger
-	clients         []exchange.Provider
-	cfg             *config.Config
-	tradeCount      int64
-	signalHandler   *signalHandler
-	executionEngine *ExecutionEngine
+	logger     zerolog.Logger
+	clients    []exchange.Provider
+	cfg        *config.Config
+	tradeCount int64
+	engine     *Engine
 }
 
 // NewBot creates a new Bot (constructor).
@@ -36,14 +35,12 @@ func NewBot(
 	arbitrageSpreadRepo ArbitrageSpreadRepository,
 	orderRepo OrderRepository,
 ) *ArbitrageBot {
-	instruments := newInstrumentCache()
-	engine := newExecutionEngine(clients, instruments, orderRepo, logger)
+	engine := NewEngine(clients, orderRepo, arbitrageSpreadRepo, notify, logger)
 	return &ArbitrageBot{
-		logger:          logger,
-		clients:         clients,
-		cfg:             cfg,
-		executionEngine: engine,
-		signalHandler:   newSignalHandler(notify, logger, arbitrageSpreadRepo, engine),
+		logger:  logger,
+		clients: clients,
+		cfg:     cfg,
+		engine:  engine,
 	}
 }
 
@@ -109,12 +106,12 @@ func (a *ArbitrageBot) Run(ctx context.Context) error {
 
 	// END BALANCES
 
-	if err := a.executionEngine.instrumentCache.Load(ctx, a.clients); err != nil {
-		return fmt.Errorf("failed to load instrument cache: %w", err)
+	if err := a.engine.LoadInstruments(ctx, a.clients); err != nil {
+		return fmt.Errorf("failed to load instruments: %w", err)
 	}
 	a.logger.Info().Msg("instrument cache loaded")
 
-	if err := a.executionEngine.ListenExecutions(ctx); err != nil {
+	if err := a.engine.ListenExecutions(ctx); err != nil {
 		return fmt.Errorf("failed to subscribe to executions: %w", err)
 	}
 
@@ -159,7 +156,7 @@ func (a *ArbitrageBot) Run(ctx context.Context) error {
 	tradeEventsCh := make(chan PriceChangeEvent, 2000)
 	errCh := make(chan error, len(a.clients))
 
-	go a.signalHandler.run(ctx)
+	go a.engine.Run(ctx)
 	go a.grabTrade(ctx, symbols, tradeEventsCh, errCh)
 	go a.logTradeCount(ctx)
 
@@ -184,7 +181,7 @@ func (a *ArbitrageBot) Run(ctx context.Context) error {
 			}
 			spreadEvents := spreadDetector.Detect(event.Symbol, prices[event.Symbol])
 			if spreadEvents != nil {
-				a.signalHandler.handleSignal(spreadEvents)
+				a.engine.HandleSignal(spreadEvents)
 			}
 		}
 	}

@@ -11,6 +11,8 @@ type PositionState int
 const (
 	// PositionStateOpening means both orders have been submitted but not yet confirmed.
 	PositionStateOpening PositionState = iota
+	// PositionStateOpeningPendingClose means spread closed while orders are still being confirmed.
+	PositionStateOpeningPendingClose
 	// PositionStateOpen means both orders are confirmed and the position is active.
 	PositionStateOpen
 	// PositionStateClosing means close orders have been submitted.
@@ -30,8 +32,7 @@ type OpenPosition struct {
 	BuyConfirmed  bool
 	SellConfirmed bool
 
-	State       PositionState
-	ShouldClose bool // set when SpreadClosed arrives while still in Opening state
+	State PositionState
 }
 
 func (p *OpenPosition) bothConfirmed() bool {
