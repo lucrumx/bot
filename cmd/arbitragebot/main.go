@@ -16,6 +16,7 @@ import (
 	"github.com/lucrumx/bot/internal/exchange"
 	"github.com/lucrumx/bot/internal/exchange/client/bingx"
 	"github.com/lucrumx/bot/internal/exchange/client/bybit"
+	"github.com/lucrumx/bot/internal/exchange/client/mexc"
 	"github.com/lucrumx/bot/internal/notifier"
 
 	"github.com/lucrumx/bot/internal/exchange/arbitragebot"
@@ -32,17 +33,20 @@ func main() {
 
 	byBitClient := bybit.NewByBitClient(cfg, logger)
 	bingXClient := bingx.NewClient(cfg, logger)
+	mexcClient := mexc.NewClient(cfg, logger)
 
 	clients := []exchange.Provider{
 		byBitClient,
 		bingXClient,
+		mexcClient,
 	}
 
 	db := storage.InitDB(cfg)
 	notif := notifier.NewTelegramNotifier(cfg)
 	arbitrageSpreadRepo := arbitragebot.NewArbitrageSpreadRepository(db)
+	orderRepo := arbitragebot.NewOrderRepository(db)
 
-	bot := arbitragebot.NewBot(clients, logger, cfg, notif, arbitrageSpreadRepo)
+	bot := arbitragebot.NewBot(clients, logger, cfg, notif, arbitrageSpreadRepo, orderRepo)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
