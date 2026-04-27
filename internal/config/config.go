@@ -162,6 +162,10 @@ func loadFromEnv(cfg *Config, logger zerolog.Logger) error {
 	if err != nil {
 		return raiseErrorEnv("ARBITRATION_BOT_PERCENT_FOR_CLOSE_SPREAD")
 	}
+	ArbitrageBotSilentMode, err := strconv.ParseBool(utils.GetEnv("ARBITRATION_BOT_SILENT_MODE", ""))
+	if err != nil {
+		ArbitrageBotSilentMode = true
+	}
 
 	botConfig := BotConfig{
 		CheckInterval:         time.Duration(checkIntervalRaw) * time.Second,
@@ -177,6 +181,7 @@ func loadFromEnv(cfg *Config, logger zerolog.Logger) error {
 		MaxAgeMs:              ArbitrageBotMaxAgeMs,
 		MinSpreadPercent:      ArbitrageBotMinSpreadPercent,
 		PercentForCloseSpread: ArbitrageBotPercentForCloseSpread,
+		SilentMode:            ArbitrageBotSilentMode,
 	}
 
 	cfg.Exchange = ExchangeConfig{

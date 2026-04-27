@@ -38,7 +38,7 @@ func TestFormatPrice_PreservesLowPricePrecision(t *testing.T) {
 
 func TestEngine_HandleOpen_ShowsDistinctLowPrices(t *testing.T) {
 	notif := &notifierStub{}
-	engine := NewEngine(nil, nil, &repoStub{}, notif, zerolog.Nop())
+	engine := NewEngine(nil, nil, nil, &repoStub{}, notif, zerolog.Nop())
 
 	engine.handleOpen(context.Background(), &SpreadEvent{
 		Status:            models.ArbitrageSpreadOpened,

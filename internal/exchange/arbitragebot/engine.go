@@ -11,6 +11,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/shopspring/decimal"
 
+	"github.com/lucrumx/bot/internal/config"
 	"github.com/lucrumx/bot/internal/exchange"
 	"github.com/lucrumx/bot/internal/models"
 	"github.com/lucrumx/bot/internal/notifier"
@@ -18,6 +19,7 @@ import (
 
 // Engine handles spread signals, executes arbitrage orders, and sends notifications.
 type Engine struct {
+	cfg         *config.Config
 	clients     map[string]exchange.Provider
 	instruments map[string]map[string]exchange.Instrument // instruments[exchange][symbol]
 	orderRepo   OrderRepository
@@ -33,6 +35,7 @@ type Engine struct {
 
 // NewEngine creates a new Engine.
 func NewEngine(
+	cfg *config.Config,
 	clients []exchange.Provider,
 	orderRepo OrderRepository,
 	spreadRepo ArbitrageSpreadRepository,
@@ -44,6 +47,7 @@ func NewEngine(
 		clientMap[c.GetExchangeName()] = c
 	}
 	return &Engine{
+		cfg:         cfg,
 		clients:     clientMap,
 		instruments: make(map[string]map[string]exchange.Instrument),
 		orderRepo:   orderRepo,
@@ -111,7 +115,9 @@ func (e *Engine) HandleSignal(events []*SpreadEvent) {
 // --- signal handling ---
 
 func (e *Engine) handleOpen(ctx context.Context, event *SpreadEvent) {
-	e.openPosition(ctx, event)
+	if !e.isSilentMode() {
+		e.openPosition(ctx, event)
+	}
 
 	go func() {
 		spreadStr := strconv.FormatFloat(event.FromSpreadPercent, 'f', 2, 64)
@@ -158,6 +164,7 @@ func (e *Engine) handleOpen(ctx context.Context, event *SpreadEvent) {
 }
 
 func (e *Engine) handleUpdate(ctx context.Context, event *SpreadEvent) {
+	// TODO наращивать позу при росте спреда?
 	go func() {
 		spreadStr := strconv.FormatFloat(event.MaxSpreadPercent, 'f', 2, 64)
 
@@ -199,7 +206,9 @@ func (e *Engine) handleUpdate(ctx context.Context, event *SpreadEvent) {
 }
 
 func (e *Engine) handleClose(ctx context.Context, event *SpreadEvent) {
-	e.closePosition(ctx, event)
+	if !e.isSilentMode() {
+		e.closePosition(ctx, event)
+	}
 
 	go func() {
 		e.logger.Warn().
@@ -555,4 +564,8 @@ func (e *Engine) markOrderFilled(ctx context.Context, event exchange.OrderExecut
 	if err := e.orderRepo.UpdateFilled(ctx, event.OrderID, event.ExecPrice, event.ExecQty); err != nil {
 		e.logger.Error().Err(err).Str("order_id", event.OrderID.String()).Msg("execution: failed to mark order filled")
 	}
+}
+
+func (e *Engine) isSilentMode() bool {
+	return e.cfg.Exchange.ArbitrageBot.SilentMode
 }

@@ -9,12 +9,17 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
+	"github.com/shopspring/decimal"
 
 	"github.com/lucrumx/bot/internal/notifier"
 
 	"github.com/lucrumx/bot/internal/config"
 
 	"github.com/lucrumx/bot/internal/exchange"
+)
+
+const (
+	minBalanceForTrading = 5
 )
 
 // ArbitrageBot represents a bot engine.
@@ -35,7 +40,14 @@ func NewBot(
 	arbitrageSpreadRepo ArbitrageSpreadRepository,
 	orderRepo OrderRepository,
 ) *ArbitrageBot {
-	engine := NewEngine(clients, orderRepo, arbitrageSpreadRepo, notify, logger)
+
+	silentModeTxt := "off"
+	if cfg.Exchange.ArbitrageBot.SilentMode {
+		silentModeTxt = "on"
+	}
+	fmt.Printf("Arbitrage bot silent mode is %s\n", silentModeTxt)
+
+	engine := NewEngine(cfg, clients, orderRepo, arbitrageSpreadRepo, notify, logger)
 	return &ArbitrageBot{
 		logger:  logger,
 		clients: clients,
@@ -73,38 +85,9 @@ func (a *ArbitrageBot) Run(ctx context.Context) error {
 	}
 
 	// Start retriving balances
-	// TODO: вынести обновление балансов в отедлный метод-горутину
 	balanceStore := newBalanceStore(a.logger)
 	balanceStore.Start(ctx, a.clients)
-	go func() {
-		ticker := time.NewTicker(time.Second * 10)
-		defer ticker.Stop()
-
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-ticker.C:
-				for _, client := range a.clients {
-					balances, ok := balanceStore.Get(client.GetExchangeName())
-
-					if ok {
-						fmt.Println("O-------")
-						fmt.Println(client.GetExchangeName())
-						fmt.Println(balances)
-						fmt.Println("C-------")
-					} else {
-						fmt.Println("O-------")
-						fmt.Println(client.GetExchangeName())
-						fmt.Println("Balance is empty")
-						fmt.Println("C-------")
-					}
-				}
-			}
-		}
-	}()
-
-	// END BALANCES
+	a.checkBalances(ctx)
 
 	if err := a.engine.LoadInstruments(ctx, a.clients); err != nil {
 		return fmt.Errorf("failed to load instruments: %w", err)
@@ -311,4 +294,37 @@ func (a *ArbitrageBot) logTradeCount(ctx context.Context) {
 			lastTradeCount = total
 		}
 	}
+}
+
+func (a *ArbitrageBot) checkBalances(ctx context.Context) {
+	minBalance := decimal.NewFromInt(minBalanceForTrading)
+
+	balanceStore := newBalanceStore(a.logger)
+	balanceStore.Start(ctx, a.clients)
+
+	cl := make([]exchange.Provider, 0, len(a.clients))
+
+	for _, client := range a.clients {
+		balances, ok := balanceStore.Get(client.GetExchangeName())
+
+		if ok {
+			fmt.Println(client.GetExchangeName())
+			fmt.Printf("%+v\n", balances)
+			for _, balance := range balances {
+				if balance.Asset == "USDT" && balance.Free.GreaterThanOrEqual(minBalance) {
+					cl = append(cl, client)
+				}
+			}
+		}
+	}
+
+	if len(cl) < 2 {
+		a.logger.Fatal().Msgf("not enough balance for trading")
+	}
+
+	for _, client := range cl {
+		a.logger.Info().Msgf("enough balance for trading on %s", client.GetExchangeName())
+	}
+
+	a.clients = cl
 }
