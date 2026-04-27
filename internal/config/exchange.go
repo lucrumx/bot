@@ -49,10 +49,11 @@ type BotConfig struct {
 
 // ArbitrageBotConfig contains configuration for arbitration bot.
 type ArbitrageBotConfig struct {
-	MaxAgeMs              int64   `yaml:"max_age_ms"`
-	MinSpreadPercent      float64 `yaml:"min_spread_percent"`
-	PercentForCloseSpread float64 `yaml:"percent_for_close_spread"`
-	SilentMode            bool    `yaml:"silent_mode"`
+	MaxAgeMs              int64    `yaml:"max_age_ms"`
+	MinSpreadPercent      float64  `yaml:"min_spread_percent"`
+	PercentForCloseSpread float64  `yaml:"percent_for_close_spread"`
+	SilentMode            bool     `yaml:"silent_mode"`
+	SkipExchanges         []string `yaml:"skip_exchanges"`
 }
 
 // ManipulationBotConfig contains configuration for spot-vs-perp manipulation detector.
