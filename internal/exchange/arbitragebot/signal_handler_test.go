@@ -8,6 +8,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/require"
 
+	"github.com/lucrumx/bot/internal/config"
 	"github.com/lucrumx/bot/internal/models"
 )
 
@@ -38,7 +39,7 @@ func TestFormatPrice_PreservesLowPricePrecision(t *testing.T) {
 
 func TestEngine_HandleOpen_ShowsDistinctLowPrices(t *testing.T) {
 	notif := &notifierStub{}
-	engine := NewEngine(nil, nil, nil, &repoStub{}, notif, zerolog.Nop())
+	engine := NewEngine(&config.Config{}, nil, nil, &repoStub{}, notif, zerolog.Nop())
 
 	engine.handleOpen(context.Background(), &SpreadEvent{
 		Status:            models.ArbitrageSpreadOpened,
