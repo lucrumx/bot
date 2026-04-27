@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -80,6 +81,8 @@ type Prices map[string]map[string]PricePoint
 
 // Run starts the arbitrage bot engine.
 func (a *ArbitrageBot) Run(ctx context.Context) error {
+	a.clients = a.skipExchange()
+	
 	if len(a.clients) < 2 {
 		return fmt.Errorf("not enough clients: %d", len(a.clients))
 	}
@@ -327,4 +330,24 @@ func (a *ArbitrageBot) checkBalances(ctx context.Context) {
 	}
 
 	a.clients = cl
+}
+
+func (a *ArbitrageBot) skipExchange() []exchange.Provider {
+	skipSet := make(map[string]struct{}, len(a.cfg.Exchange.ArbitrageBot.SkipExchanges))
+	for _, skip := range a.cfg.Exchange.ArbitrageBot.SkipExchanges {
+		skipSet[strings.ToLower(skip)] = struct{}{}
+	}
+
+	restClients := make([]exchange.Provider, 0, len(a.clients))
+
+	for _, client := range a.clients {
+		_, ok := skipSet[strings.ToLower(client.GetExchangeName())]
+		if !ok {
+			restClients = append(restClients, client)
+		} else {
+			a.logger.Info().Msgf("Siletn mode: skip exchange %s", client.GetExchangeName())
+		}
+	}
+
+	return restClients
 }

@@ -56,3 +56,16 @@ func main() {
 	}
 
 }
+
+
+/*
+Фандинг
+# ByBit — все символы, поле fundingRate
+curl -s "https://api.bybit.com/v5/market/tickers?category=linear" | python3 -m json.tool | head -30
+
+# BingX — все символы, поле lastFundingRate
+curl -s "https://open-api.bingx.com/openApi/swap/v2/quote/premiumIndex" | python3 -m json.tool | head -30
+
+# MEXC — все символы, поле fundingRate
+curl -s "https://contract.mexc.com/api/v1/contract/funding_rate" | python3 -m json.tool | head -30
+*/
