@@ -228,6 +228,8 @@ func (c *WsPrivateClient) getListenKey(ctx context.Context) (string, error) {
 	signature := computeHmac256(c.cfg, queryStr)
 	req.URL.RawQuery = fmt.Sprintf("%s&signature=%s", getSortedQuery(query, 0, true), signature)
 
+	req.Header.Set("X-BX-APIKEY", c.cfg.Exchange.BingX.APIKey)
+
 	httpClient := &http.Client{}
 	resp, err := httpClient.Do(req)
 	if err != nil {
@@ -236,7 +238,9 @@ func (c *WsPrivateClient) getListenKey(ctx context.Context) (string, error) {
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("BingX client unexpected http while getting tickers status code: %d", resp.StatusCode)
+		body, err := io.ReadAll(resp.Body)
+		fmt.Printf("err %v\n", err)
+		return "", fmt.Errorf("BingX client unexpected http while getting listen key status code: %d, %s", resp.StatusCode, body)
 	}
 
 	body, err := io.ReadAll(resp.Body)

@@ -16,7 +16,7 @@ type WSTradeDTO struct {
 		TradeSide     int64   `json:"T"` // Trade side: 1 buy, 2 sell
 		O             int64   `json:"o"` // Open/close flag: 1 new position, 2 reduce position, 3 position unchanged. If O=1, v is the added position size
 		M             int64   `json:"m"` // Self-trade: 1 yes, 2 no
-		TransactionID int64   `json:"i"` // Transaction ID
+		TransactionID string  `json:"i"` // Transaction ID
 		TradeTime     int64   `json:"t"` // Trade time
 	} `json:"data"`
 }

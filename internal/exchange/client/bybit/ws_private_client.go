@@ -86,12 +86,12 @@ func (c *WsPrivateClient) Start(ctx context.Context) error {
 
 func (c *WsPrivateClient) auth() error {
 	// timestamp
-	expires := time.Now().UnixMilli() * 5000
+	expires := time.Now().UnixMilli() + 5000
 
 	// Auth
 	apiKey := c.cfg.Exchange.ByBit.APIKey
-	strForSign := fmt.Sprintf("%d%s", expires, apiKey)
-	signature := sign(strForSign, c.cfg.Exchange.ByBit.APISecret)
+	strForSign := fmt.Sprintf("GET/realtime%d", expires)
+	signature := sign(c.cfg.Exchange.ByBit.APISecret, strForSign)
 	authReq := map[string]interface{}{
 		"op": "auth",
 		"args": []interface{}{
@@ -102,26 +102,26 @@ func (c *WsPrivateClient) auth() error {
 	}
 
 	if err := c.writeJSON(authReq); err != nil {
-		return fmt.Errorf("failed to send auth request: %w", err)
+		return fmt.Errorf("BiBit ws private: failed to send auth request: %w", err)
 	}
 
 	// read the first message on auth
 	mt, raw, err := c.wsConn.ReadMessage()
 	if err != nil {
-		return fmt.Errorf("failed to read first websocket message: %w", err)
+		return fmt.Errorf("BiBit ws private: failed to read first websocket message: %w", err)
 	}
 
 	if mt != websocket.TextMessage {
-		return fmt.Errorf("expected text message, got %d", mt)
+		return fmt.Errorf("BiBit ws private: expected text message, got %d", mt)
 	}
 
 	var authMessage dtos.AuthRespDTO
 	if err := json.Unmarshal(raw, &authMessage); err != nil {
-		return fmt.Errorf("failed to unmarshal auth response: %w", err)
+		return fmt.Errorf("BiBit ws private: failed to unmarshal auth response: %w", err)
 	}
 
 	if !authMessage.Success {
-		return fmt.Errorf("auth response not successful, %v", authMessage)
+		return fmt.Errorf("BiBit ws private: auth response not successful, %v", authMessage)
 	}
 
 	return nil
