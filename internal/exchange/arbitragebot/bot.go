@@ -82,7 +82,7 @@ type Prices map[string]map[string]PricePoint
 // Run starts the arbitrage bot engine.
 func (a *ArbitrageBot) Run(ctx context.Context) error {
 	a.clients = a.skipExchange()
-	
+
 	if len(a.clients) < 2 {
 		return fmt.Errorf("not enough clients: %d", len(a.clients))
 	}

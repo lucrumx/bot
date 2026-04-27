@@ -57,7 +57,6 @@ func main() {
 
 }
 
-
 /*
 Фандинг
 # ByBit — все символы, поле fundingRate
