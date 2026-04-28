@@ -107,35 +107,16 @@ func (a *ArbitrageBot) Run(ctx context.Context) error {
 	}
 	a.logger.Info().Msgf("uniq clients: %s", uniqNames)
 
-	symbolsByExchange := map[string]map[string]struct{}{}
-	for _, client := range a.clients {
-		exchangeName := client.GetExchangeName()
-
-		tickers, err := client.GetTickers(ctx, []string{}, exchange.CategoryLinear)
-		if err != nil {
-			return fmt.Errorf("failed to get tickers from %s: %w", exchangeName, err)
-		}
-
-		symbols := map[string]struct{}{}
-		for _, ticker := range tickers {
-			if ticker.Symbol == "" {
-				continue
-			}
-			symbols[ticker.Symbol] = struct{}{}
-		}
-		symbolsByExchange[exchangeName] = symbols
-	}
-
-	intersectedSymbols := intersect(symbolsByExchange) // common symbols for all exchanges
-	if len(intersectedSymbols) < 1 {
+	commonSymbols := a.engine.CommonSymbols()
+	if len(commonSymbols) < 1 {
 		return fmt.Errorf("no common symbols for exchanges")
 	}
-	a.logger.Info().Msgf("common symbols: %d", len(intersectedSymbols))
+	a.logger.Info().Msgf("common symbols: %d", len(commonSymbols))
 
 	//
 	// websocket subscription
-	symbols := make([]string, 0, len(intersectedSymbols))
-	for s := range intersectedSymbols {
+	symbols := make([]string, 0, len(commonSymbols))
+	for s := range commonSymbols {
 		symbols = append(symbols, s)
 	}
 
@@ -227,29 +208,6 @@ func (a *ArbitrageBot) grabTrade(ctx context.Context, symbols []string, tradeEve
 	<-subCtx.Done()
 }
 
-func intersect(symbolsByExchange map[string]map[string]struct{}) map[string]struct{} {
-	result := map[string]struct{}{}
-	first := true
-
-	for _, symbols := range symbolsByExchange {
-		if first {
-			for symbol := range symbols {
-				result[symbol] = struct{}{}
-			}
-			first = false
-			continue
-		}
-
-		for s := range result {
-			if _, ok := symbols[s]; !ok {
-				delete(result, s)
-			}
-		}
-	}
-
-	return result
-}
-
 func checkUniqClient(clients []exchange.Provider) (bool, string, string) {
 	cnt := make(map[string]int)
 	var names string
@@ -311,8 +269,6 @@ func (a *ArbitrageBot) checkBalances(ctx context.Context) {
 		balances, ok := balanceStore.Get(client.GetExchangeName())
 
 		if ok {
-			fmt.Println(client.GetExchangeName())
-			fmt.Printf("%+v\n", balances)
 			for _, balance := range balances {
 				if balance.Asset == "USDT" && balance.Free.GreaterThanOrEqual(minBalance) {
 					cl = append(cl, client)

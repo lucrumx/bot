@@ -24,7 +24,7 @@ type OpenPosition struct {
 	Symbol       string
 	BuyExchange  string
 	SellExchange string
-	Qty          decimal.Decimal
+	Qty          decimal.Decimal // quantity in coins (base currency)
 
 	BuyOrderID  uuid.UUID
 	SellOrderID uuid.UUID

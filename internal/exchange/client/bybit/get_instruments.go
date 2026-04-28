@@ -71,10 +71,11 @@ func (c *Client) GetInstruments(ctx context.Context) (map[string]exchange.Instru
 			return nil, fmt.Errorf("ByBit GetInstruments: invalid tickSize for %s: %w", item.Symbol, err)
 		}
 		result[item.Symbol] = exchange.Instrument{
-			Symbol:    item.Symbol,
-			VolStep:   volStep,
-			MinVol:    minVol,
-			PriceStep: priceStep,
+			Symbol:       item.Symbol,
+			VolStep:      volStep,
+			MinVol:       minVol,
+			PriceStep:    priceStep,
+			ContractSize: decimal.NewFromInt(1),
 		}
 	}
 

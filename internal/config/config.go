@@ -334,6 +334,9 @@ func validateConfig(cfg *Config) error {
 	if cfg.Exchange.ArbitrageBot.PercentForCloseSpread < 0 || cfg.Exchange.ArbitrageBot.PercentForCloseSpread > 0.5 {
 		return raiseErrorYAML("Exchange.ArbitrageBot.PercentForCloseSpread")
 	}
+	if cfg.Exchange.ArbitrageBot.MaxSpreadPercentForOpen <= 0 {
+		cfg.Exchange.ArbitrageBot.MaxSpreadPercentForOpen = 5
+	}
 
 	if cfg.Notifications.Telegram.BotToken == "" {
 		return raiseErrorYAML("Notifications.Telegram.BotToken")

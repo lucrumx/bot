@@ -175,6 +175,8 @@ func (c *WsPrivateClient) handleMessage() error {
 		}
 		// Blocking, but channel has buffer
 		c.executionChannel <- order
+	default:
+		c.logger.Debug().Str("event_type", r.EventType).Msg("BingX ws private: unknown event type")
 	}
 
 	return nil
