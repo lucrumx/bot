@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
 
+	"github.com/lucrumx/bot/internal/exchange"
 	"github.com/lucrumx/bot/internal/exchange/client/bingx/dtos"
 	"github.com/lucrumx/bot/internal/models"
 )
@@ -101,6 +102,20 @@ func (c *Client) submitOrder(ctx context.Context, order *models.Order, query map
 	}
 	confirmed.RawResponse = string(body)
 	confirmed.Status = models.OrderStatusPending
+
+	// BingX не шлёт execution events через WS — подтверждаем из REST ответа
+	if raw.Data.Order.Status == "FILLED" && c.wsPrivate != nil {
+		execPrice, _ := decimal.NewFromString(raw.Data.Order.AvgPrice)
+		execQty, _ := decimal.NewFromString(raw.Data.Order.ExecutedQty)
+
+		c.wsPrivate.executionChannel <- exchange.OrderExecutionEvent{
+			OrderID:   order.ID,
+			ExecPrice: execPrice,
+			ExecQty:   execQty,
+			ExecValue: execPrice.Mul(execQty),
+			OrderQty:  order.Quantity,
+		}
+	}
 
 	return nil
 }

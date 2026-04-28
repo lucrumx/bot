@@ -11,7 +11,6 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 
 	"github.com/lucrumx/bot/internal/config"
 	"github.com/lucrumx/bot/internal/exchange"
@@ -104,16 +103,15 @@ func (c *WsPrivateClient) pingPongInterval(ctx context.Context) {
 		case <-ticker.C:
 			err := c.writeMessage([]byte("Ping"))
 			if err != nil {
-				log.Warn().Err(err).Msg("Failed to send ping to BingX websocket")
+				c.logger.Warn().Err(err).Msg("Failed to send ping to BingX websocket")
 				return
 			}
 		}
 	}
 }
 
-// SubscribeToExecutions subscribe to the execution stream
-// For consistency. The BingX doesn't require any subscriptions, and once the connection is established,
-// it automatically starts sending messages.
+// SubscribeToExecutions returns the execution events channel.
+// BingX listenKey-based connections automatically receive all account events.
 func (c *WsPrivateClient) SubscribeToExecutions() (<-chan exchange.OrderExecutionEvent, error) {
 	return c.executionChannel, nil
 }
@@ -128,36 +126,34 @@ func (c *WsPrivateClient) handleMessage() error {
 	if mt == websocket.PingMessage {
 		err = c.writeControl(websocket.PongMessage, []byte("Pong"), time.Now().Add(time.Second*5))
 		if err != nil {
-			log.Warn().Err(err).Msg("Failed to send pong to BingX websocket")
+			c.logger.Warn().Err(err).Msg("Failed to send pong to BingX websocket")
 		}
 		return nil
 	}
 
 	if mt == websocket.TextMessage {
-		log.Warn().Msgf("text message? %s", string(raw))
+		c.logger.Warn().Msgf("BingX ws private: text message: %s", string(raw))
 		return nil
 	}
 
 	if mt != websocket.BinaryMessage {
-		log.Warn().Str("exchange", "BingX").Msg("unexpected message type")
+		c.logger.Warn().Str("exchange", "BingX").Msg("unexpected message type")
 		return nil
 	}
 
 	message, err := decodeGzip(raw)
 	if err != nil {
-		log.Warn().Err(err).Str("exchange", "BingX").Msg("Failed to decode gzip message from BingX private websocket")
+		c.logger.Warn().Err(err).Str("exchange", "BingX").Msg("Failed to decode gzip message from BingX private websocket")
 		return nil
 	}
 
-	if message == "Ping" {
-		err = c.writeMessage([]byte("Pong"))
-		if err != nil {
-			log.Warn().Err(err).Str("exchange", "BingX").Msg("Failed to send pong to BingX websocket (after decode binary)")
+	if message == "Ping" || message == "Pong" {
+		if message == "Ping" {
+			err = c.writeMessage([]byte("Pong"))
+			if err != nil {
+				c.logger.Warn().Err(err).Str("exchange", "BingX").Msg("Failed to send pong to BingX websocket (after decode binary)")
+			}
 		}
-		return nil
-	}
-
-	if message == "Pong" {
 		return nil
 	}
 
@@ -176,7 +172,7 @@ func (c *WsPrivateClient) handleMessage() error {
 		// Blocking, but channel has buffer
 		c.executionChannel <- order
 	default:
-		c.logger.Debug().Str("event_type", r.EventType).Msg("BingX ws private: unknown event type")
+		c.logger.Warn().Str("event_type", r.EventType).Msg("BingX ws private: unknown event type")
 	}
 
 	return nil

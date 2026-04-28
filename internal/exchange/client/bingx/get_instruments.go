@@ -11,7 +11,6 @@ import (
 	"github.com/shopspring/decimal"
 
 	"github.com/lucrumx/bot/internal/exchange"
-	"github.com/lucrumx/bot/internal/exchange/client/bingx/dtos"
 )
 
 // GetInstruments retrieves contract specifications for all instruments from BingX.
@@ -36,7 +35,18 @@ func (c *Client) GetInstruments(ctx context.Context) (map[string]exchange.Instru
 		return nil, fmt.Errorf("BingX GetInstruments: failed to read body: %w", err)
 	}
 
-	var raw dtos.ResponseGetTickerDTO
+	var raw struct {
+		Code int64  `json:"code"`
+		Msg  string `json:"msg"`
+		Data []struct {
+			Symbol            string `json:"symbol"`
+			DisplayName       string `json:"displayName"`
+			Size              string `json:"size"`
+			PricePrecision    int64  `json:"pricePrecision"`
+			QuantityPrecision int64  `json:"quantityPrecision"`
+			Status            int64  `json:"status"`
+		} `json:"data"`
+	}
 	if err := json.Unmarshal(body, &raw); err != nil {
 		return nil, fmt.Errorf("BingX GetInstruments: failed to unmarshal: %w", err)
 	}
