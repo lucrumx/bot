@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/lucrumx/bot/internal/exchange"
@@ -17,12 +16,6 @@ import (
 func (c *Client) GetTickers(ctx context.Context, symbols []string, category exchange.Category) ([]exchange.Ticker, error) {
 	if category != exchange.CategoryLinear {
 		return nil, fmt.Errorf("unsupported category")
-	}
-
-	// BingX API supports only one symbol at a time, but the interface requires a slice
-	var symbol string
-	if len(symbols) > 0 {
-		symbol = symbols[0]
 	}
 
 	req, err := http.NewRequestWithContext(
@@ -36,11 +29,10 @@ func (c *Client) GetTickers(ctx context.Context, symbols []string, category exch
 	}
 
 	query := make(map[string]string)
-	if len(symbol) > 0 {
-		if !strings.Contains(symbol, "-") {
-			// BingX API requires the symbol to be in the format "BTC-USDT"
-			query["symbol"] = strings.TrimSuffix(symbol, "USDT") + "-USDT"
-		}
+
+	// BingX API supports only one symbol at a time, but the interface requires a slice
+	if len(symbols) > 0 {
+		query["symbol"] = denormalizeTickerName(symbols[0])
 	}
 
 	queryStr := getSortedQuery(query, time.Now().UnixMilli(), false)
@@ -72,8 +64,13 @@ func (c *Client) GetTickers(ctx context.Context, symbols []string, category exch
 		return nil, fmt.Errorf("BingX client failed to get tickers, code: %d, msg: %s", raw.Code, raw.Msg)
 	}
 
-	result := make([]exchange.Ticker, 0, len(raw.Data))
-	for _, dto := range raw.Data {
+	tickers, err := raw.ParseData()
+	if err != nil {
+		return nil, fmt.Errorf("BingX client failed to parse tickers data: %w", err)
+	}
+
+	result := make([]exchange.Ticker, 0, len(tickers))
+	for _, dto := range tickers {
 		t, err := mapTicker(dto)
 		if err != nil {
 			return nil, fmt.Errorf("BingX client failed to map get tickers response: %w", err)

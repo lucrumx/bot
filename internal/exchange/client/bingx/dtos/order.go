@@ -41,6 +41,9 @@ type OrderDTO struct {
 	Type          string `json:"type"`
 	ClientOrderID string `json:"clientOrderId"`
 	WorkingType   string `json:"workingType"`
+	Status        string `json:"status"`
+	AvgPrice      string `json:"avgPrice"`
+	ExecutedQty   string `json:"executedQty"`
 }
 
 // OrderCreateResponseDTO represents a response to a place order request.
