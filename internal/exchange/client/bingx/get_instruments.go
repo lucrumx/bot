@@ -58,10 +58,11 @@ func (c *Client) GetInstruments(ctx context.Context) (map[string]exchange.Instru
 		symbol := normalizeTickerName(dto.DisplayName)
 
 		result[symbol] = exchange.Instrument{
-			Symbol:    symbol,
-			VolStep:   volStep,
-			MinVol:    volStep,
-			PriceStep: decimal.New(1, -int32(dto.PricePrecision)),
+			Symbol:       symbol,
+			VolStep:      volStep,
+			MinVol:       volStep,
+			PriceStep:    decimal.New(1, -int32(dto.PricePrecision)),
+			ContractSize: decimal.NewFromInt(1),
 		}
 	}
 

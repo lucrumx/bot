@@ -34,10 +34,12 @@ func (c *Client) GetInstruments(ctx context.Context) (map[string]exchange.Instru
 		Success bool `json:"success"`
 		Code    int  `json:"code"`
 		Data    []struct {
-			Symbol    string  `json:"symbol"`
-			VolUnit   float64 `json:"volUnit"`
-			MinVol    float64 `json:"minVol"`
-			PriceUnit float64 `json:"priceUnit"`
+			Symbol       string  `json:"symbol"`
+			State        int     `json:"state"` // 0 = enabled
+			VolUnit      float64 `json:"volUnit"`
+			MinVol       float64 `json:"minVol"`
+			PriceUnit    float64 `json:"priceUnit"`
+			ContractSize float64 `json:"contractSize"`
 		} `json:"data"`
 	}
 
@@ -51,13 +53,22 @@ func (c *Client) GetInstruments(ctx context.Context) (map[string]exchange.Instru
 
 	result := make(map[string]exchange.Instrument, len(raw.Data))
 	for _, item := range raw.Data {
+		if item.State != 0 {
+			continue
+		}
 		symbol := normalizeTickerName(item.Symbol)
 
+		contractSize := decimal.NewFromFloat(item.ContractSize)
+		if contractSize.IsZero() {
+			contractSize = decimal.NewFromInt(1)
+		}
+
 		result[symbol] = exchange.Instrument{
-			Symbol:    symbol,
-			VolStep:   decimal.NewFromFloat(item.VolUnit),
-			MinVol:    decimal.NewFromFloat(item.MinVol),
-			PriceStep: decimal.NewFromFloat(item.PriceUnit),
+			Symbol:       symbol,
+			VolStep:      decimal.NewFromFloat(item.VolUnit),
+			MinVol:       decimal.NewFromFloat(item.MinVol),
+			PriceStep:    decimal.NewFromFloat(item.PriceUnit),
+			ContractSize: contractSize,
 		}
 	}
 

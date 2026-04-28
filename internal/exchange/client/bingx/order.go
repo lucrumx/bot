@@ -18,7 +18,7 @@ import (
 
 // Api description: https://bingx-api.github.io/docs-v3/#/en/Swap/Trades%20Endpoints/Place%20order
 
-const orderURL = "/openApi/swap/v2/trade/order/test"
+const orderURL = "/openApi/swap/v2/trade/order"
 
 // CreateOrder sends a market order to the exchange.
 // On success, mutates order: sets ExchangeOrderID, ExchangeName, Status, RawResponse.

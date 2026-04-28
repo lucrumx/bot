@@ -161,7 +161,8 @@ func (c *wsClient) readMessage(ctx context.Context, wsConn *websocket.Conn, cate
 			}
 
 			if jsonMessage.Code != 0 {
-				log.Warn().Msgf("error ws trade message, code not 0 %v", jsonMessage)
+				log.Debug().Msgf("ws trade message code not 0: %v", jsonMessage)
+				continue
 			}
 
 			for _, val := range jsonMessage.Data {

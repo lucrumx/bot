@@ -10,6 +10,7 @@ import (
 
 	"github.com/lucrumx/bot/internal/config"
 	"github.com/lucrumx/bot/internal/models"
+	"github.com/lucrumx/bot/internal/utils"
 )
 
 type notifierStub struct {
@@ -32,9 +33,9 @@ func (r *repoStub) FindAll(_ context.Context, _ FindFilter) ([]*models.Arbitrage
 }
 
 func TestFormatPrice_PreservesLowPricePrecision(t *testing.T) {
-	require.Equal(t, "0.00019400", formatPrice(0.000194))
-	require.Equal(t, "0.00020000", formatPrice(0.0002))
-	require.Equal(t, "1.2345", formatPrice(1.2345))
+	require.Equal(t, "0.00019400", utils.FormatPrice(0.000194))
+	require.Equal(t, "0.00020000", utils.FormatPrice(0.0002))
+	require.Equal(t, "1.2345", utils.FormatPrice(1.2345))
 }
 
 func TestEngine_HandleOpen_ShowsDistinctLowPrices(t *testing.T) {
