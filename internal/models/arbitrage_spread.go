@@ -38,7 +38,7 @@ type ArbitrageSpread struct {
 	MaxSpreadPercent decimal.Decimal       `gorm:"type:decimal(10,4);not null"`
 	Status           ArbitrageSpreadStatus `gorm:"type:varchar(20);not null"`
 
-	Profit decimal.Decimal `gorm:"type:decimal(28,12,18);null"`
+	Profit decimal.Decimal `gorm:"type:decimal(28,12);null"`
 
 	OpenBuyOrderID   uuid.UUID `gorm:"type:uuid;"`
 	OpenSellOrderID  uuid.UUID `gorm:"type:uuid;"`
