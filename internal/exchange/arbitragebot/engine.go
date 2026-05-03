@@ -30,9 +30,15 @@ type Engine struct {
 
 	signalCh chan *SpreadEvent
 
-	mu              sync.Mutex
-	positions       map[string]*OpenPosition
-	blacklistedSyms map[string]struct{} // символы, для которых торговля невозможна (runtime blacklist)
+	mu               sync.Mutex
+	positions        map[string]*OpenPosition
+	blacklistedSyms  map[string]struct{} // символы, для которых торговля невозможна (runtime blacklist)
+	chOrdersToUpdate chan uuid.UUID      // channel for order IDs that need to be updated and have their spread profit recalculated
+}
+
+type ordersToOpenClosePosition struct {
+	buyOrderID  uuid.UUID
+	sellOrderID uuid.UUID
 }
 
 // NewEngine creates a new Engine.
@@ -49,21 +55,23 @@ func NewEngine(
 		clientMap[c.GetExchangeName()] = c
 	}
 	return &Engine{
-		cfg:             cfg,
-		clients:         clientMap,
-		instruments:     make(map[string]map[string]exchange.Instrument),
-		orderRepo:       orderRepo,
-		spreadRepo:      spreadRepo,
-		notif:           notif,
-		logger:          logger,
-		signalCh:        make(chan *SpreadEvent, 1000),
-		positions:       make(map[string]*OpenPosition),
-		blacklistedSyms: make(map[string]struct{}),
+		cfg:              cfg,
+		clients:          clientMap,
+		instruments:      make(map[string]map[string]exchange.Instrument),
+		orderRepo:        orderRepo,
+		spreadRepo:       spreadRepo,
+		notif:            notif,
+		logger:           logger,
+		signalCh:         make(chan *SpreadEvent, 1000),
+		positions:        make(map[string]*OpenPosition),
+		blacklistedSyms:  make(map[string]struct{}),
+		chOrdersToUpdate: make(chan uuid.UUID, 30),
 	}
 }
 
 // LoadInstruments fetches contract specifications from all exchanges.
 // Also syncs the internal client map to match the provided clients list.
+// TODO: вынести это из Engine
 func (e *Engine) LoadInstruments(ctx context.Context, clients []exchange.Provider) error {
 	e.clients = make(map[string]exchange.Provider, len(clients))
 	for _, client := range clients {
@@ -124,8 +132,9 @@ func (e *Engine) HandleSignal(events []*SpreadEvent) {
 // --- signal handling ---
 
 func (e *Engine) handleOpen(ctx context.Context, event *SpreadEvent) {
+	var orders *ordersToOpenClosePosition
 	if !e.isSilentMode() {
-		e.openPosition(ctx, event)
+		orders = e.openPosition(ctx, event)
 	}
 
 	go func() {
@@ -155,7 +164,7 @@ func (e *Engine) handleOpen(ctx context.Context, event *SpreadEvent) {
 	}()
 
 	go func() {
-		err := e.spreadRepo.Create(ctx, &models.ArbitrageSpread{
+		spread := &models.ArbitrageSpread{
 			Symbol:           event.Symbol,
 			BuyOnExchange:    event.BuyOnExchange,
 			SellOnExchange:   event.SellOnExchange,
@@ -164,7 +173,12 @@ func (e *Engine) handleOpen(ctx context.Context, event *SpreadEvent) {
 			SpreadPercent:    decimal.NewFromFloat(event.FromSpreadPercent),
 			MaxSpreadPercent: decimal.NewFromFloat(event.MaxSpreadPercent),
 			Status:           event.Status,
-		})
+		}
+		if orders != nil {
+			spread.OpenBuyOrderID = orders.buyOrderID
+			spread.OpenSellOrderID = orders.sellOrderID
+		}
+		err := e.spreadRepo.Create(ctx, spread)
 		if err != nil {
 			e.logger.Warn().Err(err).Msgf("failed to create arbitrage spread, symbol: %s, buy on: %s, sell on: %s",
 				event.Symbol, event.BuyOnExchange, event.SellOnExchange)
@@ -298,19 +312,19 @@ func (e *Engine) canBeOpened(event *SpreadEvent) bool {
 }
 
 // --- execution ---
-
-func (e *Engine) openPosition(ctx context.Context, event *SpreadEvent) {
+// (byuOrderID, sellOrderID)
+func (e *Engine) openPosition(ctx context.Context, event *SpreadEvent) *ordersToOpenClosePosition {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
 	if !e.canBeOpened(event) {
-		return
+		return nil
 	}
 
 	step, err := e.coinStep(event.Symbol, event.BuyOnExchange, event.SellOnExchange)
 	if err != nil {
 		e.logger.Error().Err(err).Str("symbol", event.Symbol).Msg("execution: failed to get coin step")
-		return
+		return nil
 	}
 
 	notional := decimal.NewFromInt(e.notional())
@@ -319,31 +333,31 @@ func (e *Engine) openPosition(ctx context.Context, event *SpreadEvent) {
 
 	if qty.IsZero() {
 		e.logger.Error().Str("symbol", event.Symbol).Msg("execution: aligned qty is zero")
-		return
+		return nil
 	}
 
 	buyVol, err := e.qtyForExchange(qty, event.Symbol, event.BuyOnExchange)
 	if err != nil {
 		e.logger.Error().Err(err).Str("symbol", event.Symbol).Msg("execution: failed to convert buy qty")
-		return
+		return nil
 	}
 
 	sellVol, err := e.qtyForExchange(qty, event.Symbol, event.SellOnExchange)
 	if err != nil {
 		e.logger.Error().Err(err).Str("symbol", event.Symbol).Msg("execution: failed to convert sell qty")
-		return
+		return nil
 	}
 
 	buyOrder, err := e.makeOrder(event.Symbol, models.OrderSideBuy, buyVol, event.BuyOnExchange)
 	if err != nil {
 		e.logger.Error().Err(err).Str("symbol", event.Symbol).Msg("execution: failed to make buy order")
-		return
+		return nil
 	}
 
 	sellOrder, err := e.makeOrder(event.Symbol, models.OrderSideSell, sellVol, event.SellOnExchange)
 	if err != nil {
 		e.logger.Error().Err(err).Str("symbol", event.Symbol).Msg("execution: failed to make sell order")
-		return
+		return nil
 	}
 
 	pos := &OpenPosition{
@@ -368,6 +382,11 @@ func (e *Engine) openPosition(ctx context.Context, event *SpreadEvent) {
 		Msg("🚀 execution: opening position")
 
 	go e.submitOpenLegs(ctx, pos, &buyOrder, &sellOrder)
+
+	return &ordersToOpenClosePosition{
+		buyOrderID:  buyOrder.ID,
+		sellOrderID: sellOrder.ID,
+	}
 }
 
 func (e *Engine) closePosition(ctx context.Context, event *SpreadEvent) {
@@ -426,6 +445,8 @@ func (e *Engine) handleExecution(ctx context.Context, event exchange.OrderExecut
 		} else {
 			continue
 		}
+
+		e.chOrdersToUpdate <- event.OrderID
 
 		if !pos.bothConfirmed() {
 			return
@@ -556,6 +577,45 @@ func (e *Engine) submitCloseLegs(ctx context.Context, pos *OpenPosition) {
 	e.mu.Unlock()
 
 	e.logger.Info().Str("symbol", pos.Symbol).Msg("💰 execution: position closed")
+
+	// update spread, set close order IDs for profit calculation
+	go func() {
+		e.saveOrder(&buyOrder)
+		e.saveOrder(&sellOrder)
+
+		spread, err := e.spreadRepo.FindOne(ctx, FindFilter{
+			Symbol: pos.Symbol,
+			BuyEx:  pos.BuyExchange,
+			SellEx: pos.SellExchange,
+		})
+		if err != nil {
+			e.logger.Warn().Err(err).Msgf("failed to find arbitrage spread for update after close, symbol: %s, buy exchange: %s, sell exchange: %s",
+				pos.Symbol, pos.BuyExchange, pos.SellExchange)
+			return
+		}
+
+		if spread.CloseBuyOrderID != uuid.Nil || spread.CloseSellOrderID != uuid.Nil {
+			e.logger.Warn().Msgf("arbitrage spread already has close order IDs, skipping update, symbol: %s, buy exchange: %s, sell exchange: %s",
+				pos.Symbol, pos.BuyExchange, pos.SellExchange)
+			return
+		}
+
+		err = e.spreadRepo.Update(ctx, &models.ArbitrageSpread{
+			CloseBuyOrderID:  buyOrder.ID,
+			CloseSellOrderID: sellOrder.ID,
+			UpdatedAt:        time.Now(),
+		}, FindFilter{
+			ID: spread.ID,
+		})
+		if err != nil {
+			e.logger.Warn().Err(err).Msgf("failed to update arbitrage spread, symbol: %s, buy exchange: %s, sell exchange: %s",
+				pos.Symbol, pos.BuyExchange, pos.SellExchange)
+			return
+		}
+
+		e.chOrdersToUpdate <- buyOrder.ID
+		e.chOrdersToUpdate <- sellOrder.ID
+	}()
 }
 
 // --- helpers ---

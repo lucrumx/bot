@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/require"
 
@@ -30,6 +31,12 @@ func (r *repoStub) Update(_ context.Context, _ *models.ArbitrageSpread, _ FindFi
 }
 func (r *repoStub) FindAll(_ context.Context, _ FindFilter) ([]*models.ArbitrageSpread, error) {
 	return nil, nil
+}
+func (r *repoStub) FindOne(_ context.Context, _ FindFilter) (*models.ArbitrageSpread, error) {
+	return nil, nil
+}
+func (r *repoStub) FindOneByOrderID(_ context.Context, _ uuid.UUID) (*models.ArbitrageSpread, error) {
+	return &models.ArbitrageSpread{}, nil
 }
 
 func TestFormatPrice_PreservesLowPricePrecision(t *testing.T) {

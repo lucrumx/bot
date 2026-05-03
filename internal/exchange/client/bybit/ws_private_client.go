@@ -211,13 +211,14 @@ func (c *WsPrivateClient) handleExecutionEvent(message *dtos.MessageDTO) []excha
 
 		if _, ok := orders[orderID]; !ok {
 			orders[orderID] = exchange.OrderExecutionEvent{
-				OrderID:    execution.OrderLinkID,
-				ExecPrice:  execution.ExecPrice,
-				ExecQty:    execution.ExecQty,
-				ExecValue:  execution.ExecValue,
-				LeavesQty:  execution.LeavesQty,
-				OrderPrice: execution.OrderPrice,
-				OrderQty:   execution.OrderQty,
+				OrderID:         execution.OrderLinkID,
+				ExchangeOrderID: execution.OrderID,
+				ExecPrice:       execution.ExecPrice,
+				ExecQty:         execution.ExecQty,
+				ExecValue:       execution.ExecValue,
+				LeavesQty:       execution.LeavesQty,
+				OrderPrice:      execution.OrderPrice,
+				OrderQty:        execution.OrderQty,
 			}
 		} else {
 			order := orders[orderID]

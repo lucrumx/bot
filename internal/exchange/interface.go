@@ -4,6 +4,8 @@ package exchange
 import (
 	"context"
 
+	"github.com/google/uuid"
+
 	"github.com/lucrumx/bot/internal/models"
 )
 
@@ -30,6 +32,7 @@ type Provider interface {
 	CloseOrder(ctx context.Context, order *models.Order) error
 	GetBalances(ctx context.Context) ([]models.Balance, error)
 	SetLeverage(ctx context.Context, symbol string, leverage int64) error
+	GetOrder(ctx context.Context, orderID uuid.UUID, exchangeOrderID string, symbol string) (ExchangeOrder, error)
 	//
 	SubscribeExecutions(ctx context.Context) (<-chan OrderExecutionEvent, error)
 }

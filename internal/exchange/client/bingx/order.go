@@ -19,7 +19,7 @@ import (
 
 // Api description: https://bingx-api.github.io/docs-v3/#/en/Swap/Trades%20Endpoints/Place%20order
 
-const orderURL = "/openApi/swap/v2/trade/order"
+const createOrderURL = "/openApi/swap/v2/trade/order"
 
 // CreateOrder sends a market order to the exchange.
 // On success, mutates order: sets ExchangeOrderID, ExchangeName, Status, RawResponse.
@@ -61,7 +61,7 @@ func (c *Client) CloseOrder(ctx context.Context, order *models.Order) error {
 }
 
 func (c *Client) submitOrder(ctx context.Context, order *models.Order, query map[string]string, timestamp int64) error {
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+orderURL, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+createOrderURL, nil)
 	if err != nil {
 		return fmt.Errorf("BingX client failed to create request: %w", err)
 	}
@@ -109,11 +109,12 @@ func (c *Client) submitOrder(ctx context.Context, order *models.Order, query map
 		execQty, _ := decimal.NewFromString(raw.Data.Order.ExecutedQty)
 
 		c.wsPrivate.executionChannel <- exchange.OrderExecutionEvent{
-			OrderID:   order.ID,
-			ExecPrice: execPrice,
-			ExecQty:   execQty,
-			ExecValue: execPrice.Mul(execQty),
-			OrderQty:  order.Quantity,
+			OrderID:         order.ID,
+			ExchangeOrderID: strconv.FormatInt(raw.Data.Order.OrderID, 10),
+			ExecPrice:       execPrice,
+			ExecQty:         execQty,
+			ExecValue:       execPrice.Mul(execQty),
+			OrderQty:        order.Quantity,
 		}
 	}
 

@@ -25,11 +25,13 @@ const (
 
 // ArbitrageBot represents a bot engine.
 type ArbitrageBot struct {
-	logger     zerolog.Logger
-	clients    []exchange.Provider
-	cfg        *config.Config
-	tradeCount int64
-	engine     *Engine
+	logger              zerolog.Logger
+	clients             []exchange.Provider
+	cfg                 *config.Config
+	arbitrageSpreadRepo ArbitrageSpreadRepository
+	orderRepo           OrderRepository
+	tradeCount          int64
+	engine              *Engine
 }
 
 // NewBot creates a new Bot (constructor).
@@ -50,10 +52,12 @@ func NewBot(
 
 	engine := NewEngine(cfg, clients, orderRepo, arbitrageSpreadRepo, notify, logger)
 	return &ArbitrageBot{
-		logger:  logger,
-		clients: clients,
-		cfg:     cfg,
-		engine:  engine,
+		logger:              logger,
+		clients:             clients,
+		cfg:                 cfg,
+		arbitrageSpreadRepo: arbitrageSpreadRepo,
+		orderRepo:           orderRepo,
+		engine:              engine,
 	}
 }
 
@@ -124,6 +128,7 @@ func (a *ArbitrageBot) Run(ctx context.Context) error {
 	errCh := make(chan error, len(a.clients))
 
 	go a.engine.Run(ctx)
+	go a.updateOrderInfoAndCalcSpreadProfit(ctx)
 	go a.grabTrade(ctx, symbols, tradeEventsCh, errCh)
 	go a.logTradeCount(ctx)
 

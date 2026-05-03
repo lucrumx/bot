@@ -1,10 +1,9 @@
 package testsflow
 
 import (
-	"fmt"
 	"os"
+	"sync"
 	"testing"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/rs/zerolog"
@@ -67,20 +66,6 @@ func Test_CreateOrderAndExecution_Integration(t *testing.T) {
 	require.True(t, ok, "Instrument not found for symbol: %s", symbol)
 	// testutils.PrintStruct(t, instrument, "Instrument")
 
-	// Create ws private
-	executionCh, err := mexc.SubscribeExecutions(ctx)
-	require.NoError(t, err, "Error subscribing to executions ch")
-	go func() {
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case execution := <-executionCh:
-				testutils.PrintStruct(t, execution, "Execution")
-			}
-		}
-	}()
-
 	// Create order
 	qty := decimal.NewFromInt(notional).Div(ticker[0].LastPrice).Round(1)
 	qty = qty.Div(instrument.VolStep).Floor().Mul(instrument.VolStep) // align to step
@@ -91,13 +76,36 @@ func Test_CreateOrderAndExecution_Integration(t *testing.T) {
 	require.Equal(t, order.Symbol, symbol, "Order symbol mismatch")
 	require.NotEqual(t, order.ID, uuid.Nil, "Order side mismatch")
 
+	// Create ws private
+	wg := sync.WaitGroup{}
+	executionCh, err := mexc.SubscribeExecutions(ctx)
+	require.NoError(t, err, "Error subscribing to executions ch")
+	go func(order *models.Order) {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case execution := <-executionCh:
+				testutils.PrintStruct(t, execution, "Execution")
+				order.ID = execution.OrderID
+				order.ExchangeOrderID = execution.ExchangeOrderID
+				wg.Done()
+			}
+		}
+	}(&order)
+
+	wg.Add(1)
 	err = mexc.CreateOrder(ctx, &order)
 	require.NoError(t, err, "Error creating order")
-
 	testutils.PrintStruct(t, order, "Order")
 
-	fmt.Println("Waiting before stop")
-	time.Sleep(5 * time.Second)
+	wg.Wait()
+
+	orderInfo, err := mexc.GetOrder(ctx, order.ID, order.ExchangeOrderID, order.Symbol)
+	testutils.PrintStruct(t, orderInfo, "Order info")
+	require.NoError(t, err, "Error getting order info")
+	require.Greater(t, orderInfo.AvgPrice.InexactFloat64(), float64(0), "Avg price should be greater than 0")
+	// require.Greater(t, orderInfo.Fees.InexactFloat64(), float64(0), "Fees should be greater than 0")
 }
 
 func makeOrder(ticker *exchange.Ticker, provider exchange.Provider, qty decimal.Decimal) (models.Order, error) {

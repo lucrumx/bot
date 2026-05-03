@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"sync"
 	"time"
 
@@ -186,13 +187,14 @@ func (c *WsPrivateClient) handleExecutionEvent(message *dtos.PrivateMessageDTO) 
 	}
 
 	return exchange.OrderExecutionEvent{
-		OrderID:    execution.OrderID,
-		ExecPrice:  execution.AvgPrice,
-		ExecQty:    execution.FilledQty,
-		ExecValue:  execution.TradeValue,
-		LeavesQty:  execution.Qty.Sub(execution.FilledQty),
-		OrderPrice: execution.Price,
-		OrderQty:   execution.Qty,
+		OrderID:         execution.OrderID,
+		ExchangeOrderID: strconv.FormatInt(execution.BingXOrderID, 10),
+		ExecPrice:       execution.AvgPrice,
+		ExecQty:         execution.FilledQty,
+		ExecValue:       execution.TradeValue,
+		LeavesQty:       execution.Qty.Sub(execution.FilledQty),
+		OrderPrice:      execution.Price,
+		OrderQty:        execution.Qty,
 	}, true
 }
 
