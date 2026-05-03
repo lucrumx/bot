@@ -192,13 +192,14 @@ func (c *WsPrivateClient) handleMessage() error {
 	}
 
 	c.executionChannel <- exchange.OrderExecutionEvent{
-		OrderID:    orderID,
-		ExecPrice:  d.DealAvgPrice,
-		ExecQty:    d.DealVol,
-		ExecValue:  d.DealAvgPrice.Mul(d.DealVol),
-		LeavesQty:  d.RemainVol,
-		OrderPrice: d.Price,
-		OrderQty:   d.Vol,
+		OrderID:         orderID,
+		ExchangeOrderID: d.OrderID,
+		ExecPrice:       d.DealAvgPrice,
+		ExecQty:         d.DealVol,
+		ExecValue:       d.DealAvgPrice.Mul(d.DealVol),
+		LeavesQty:       d.RemainVol,
+		OrderPrice:      d.Price,
+		OrderQty:        d.Vol,
 	}
 
 	return nil

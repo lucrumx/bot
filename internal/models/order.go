@@ -75,6 +75,8 @@ type Order struct {
 	Commission       decimal.Decimal `gorm:"type:decimal(28,12);"` // commission for the order
 	HasErrors        bool            `gorm:"type:boolean;default:false"`
 	RawResponse      string          `gorm:"type:text;"`
+	Fees             decimal.Decimal `gorm:"type:numeric(38,18);"`
+	Profit           decimal.Decimal `gorm:"type:numeric(38,18);"`
 	CreatedAt        time.Time       `gorm:"type:timestamptz;default:now()"`
 	UpdatedAt        time.Time       `gorm:"type:timestamptz;"`
 }

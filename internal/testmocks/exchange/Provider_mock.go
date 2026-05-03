@@ -7,6 +7,7 @@ package exchange
 import (
 	"context"
 
+	"github.com/google/uuid"
 	mock "github.com/stretchr/testify/mock"
 
 	"github.com/lucrumx/bot/internal/exchange"
@@ -318,6 +319,84 @@ func (_c *MockProvider_GetInstruments_Call) Return(stringToInstrument map[string
 }
 
 func (_c *MockProvider_GetInstruments_Call) RunAndReturn(run func(ctx context.Context) (map[string]exchange.Instrument, error)) *MockProvider_GetInstruments_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetOrder provides a mock function for the type MockProvider
+func (_mock *MockProvider) GetOrder(ctx context.Context, orderID uuid.UUID, exchangeOrderID string, symbol string) (exchange.ExchangeOrder, error) {
+	ret := _mock.Called(ctx, orderID, exchangeOrderID, symbol)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetOrder")
+	}
+
+	var r0 exchange.ExchangeOrder
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID, string, string) (exchange.ExchangeOrder, error)); ok {
+		return returnFunc(ctx, orderID, exchangeOrderID, symbol)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID, string, string) exchange.ExchangeOrder); ok {
+		r0 = returnFunc(ctx, orderID, exchangeOrderID, symbol)
+	} else {
+		r0 = ret.Get(0).(exchange.ExchangeOrder)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uuid.UUID, string, string) error); ok {
+		r1 = returnFunc(ctx, orderID, exchangeOrderID, symbol)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockProvider_GetOrder_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetOrder'
+type MockProvider_GetOrder_Call struct {
+	*mock.Call
+}
+
+// GetOrder is a helper method to define mock.On call
+//   - ctx context.Context
+//   - orderID uuid.UUID
+//   - exchangeOrderID string
+//   - symbol string
+func (_e *MockProvider_Expecter) GetOrder(ctx interface{}, orderID interface{}, exchangeOrderID interface{}, symbol interface{}) *MockProvider_GetOrder_Call {
+	return &MockProvider_GetOrder_Call{Call: _e.mock.On("GetOrder", ctx, orderID, exchangeOrderID, symbol)}
+}
+
+func (_c *MockProvider_GetOrder_Call) Run(run func(ctx context.Context, orderID uuid.UUID, exchangeOrderID string, symbol string)) *MockProvider_GetOrder_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uuid.UUID
+		if args[1] != nil {
+			arg1 = args[1].(uuid.UUID)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 string
+		if args[3] != nil {
+			arg3 = args[3].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *MockProvider_GetOrder_Call) Return(exchangeOrder exchange.ExchangeOrder, err error) *MockProvider_GetOrder_Call {
+	_c.Call.Return(exchangeOrder, err)
+	return _c
+}
+
+func (_c *MockProvider_GetOrder_Call) RunAndReturn(run func(ctx context.Context, orderID uuid.UUID, exchangeOrderID string, symbol string) (exchange.ExchangeOrder, error)) *MockProvider_GetOrder_Call {
 	_c.Call.Return(run)
 	return _c
 }

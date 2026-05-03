@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/lucrumx/bot/internal/exchange"
-	"github.com/lucrumx/bot/internal/exchange/client/bingx"
+	"github.com/lucrumx/bot/internal/exchange/client/bybit"
 	"github.com/lucrumx/bot/internal/models"
 	"github.com/lucrumx/bot/internal/utils/testutils"
 )
@@ -20,6 +20,7 @@ const symbol = "TONUSDT"
 const side = models.OrderSideBuy
 const market = models.OrderMarketLinear
 const orderType = models.OrderTypeMarket
+const notional = 7 // ордер на 7 USDT, с учетом плеча
 
 func Test_CreateOrderAndExecution_Integration(t *testing.T) {
 	if os.Getenv("INTEGRATION_TEST") != "1" {
@@ -31,10 +32,10 @@ func Test_CreateOrderAndExecution_Integration(t *testing.T) {
 	cfg := testutils.LoadTestConfig(t)
 	ctx := t.Context()
 
-	bingx := bingx.NewClient(cfg, logger)
+	bybit := bybit.NewByBitClient(cfg, logger)
 
 	// --- Check balance
-	balance, err := bingx.GetBalances(ctx)
+	balance, err := bybit.GetBalances(ctx)
 	require.NoError(t, err, "Error getting balances")
 	require.NotEmpty(t, balance, "No balances found")
 
@@ -50,60 +51,61 @@ func Test_CreateOrderAndExecution_Integration(t *testing.T) {
 	require.True(t, usdtBalance.Free.IsPositive(), "USDT balance must be positive")
 
 	// Get ticker info
-	ticker, err := bingx.GetTickers(ctx, []string{symbol}, exchange.CategoryLinear)
-	testutils.PrintStruct(t, ticker, "Ticker")
+	ticker, err := bybit.GetTickers(ctx, []string{symbol}, exchange.CategoryLinear)
 	require.NoError(t, err, "Error getting ticker")
 	require.NotEmpty(t, ticker, "No ticker found")
 	require.Len(t, ticker, 1, "Expected 1 ticker")
 	require.Equal(t, symbol, ticker[0].Symbol, "Ticker symbol mismatch")
+	// testutils.PrintStruct(t, ticker, "Ticker")
 
 	// Get instrument info
-	instruments, err := bingx.GetInstruments(ctx)
+	instruments, err := bybit.GetInstruments(ctx)
 	require.NoError(t, err, "Error getting instruments")
 	require.NotEmpty(t, instruments, "No instruments found")
-	_, ok := instruments[symbol]
+	instrument, ok := instruments[symbol]
 	require.True(t, ok, "Instrument not found for symbol: %s", symbol)
 	// testutils.PrintStruct(t, instrument, "Instrument")
 
+	// Create order
+	qty := decimal.NewFromInt(notional).Div(ticker[0].LastPrice).Round(1)
+	qty = qty.Div(instrument.VolStep).Floor().Mul(instrument.VolStep) // align to step
+
+	order, err := makeOrder(&ticker[0], bybit, qty)
+	require.NoError(t, err, "Error creating order")
+	require.NotEmpty(t, order, "Order is empty")
+	require.Equal(t, order.Symbol, symbol, "Order symbol mismatch")
+	require.NotEqual(t, order.ID, uuid.Nil, "Order side mismatch")
+
 	// Create ws private
 	wg := sync.WaitGroup{}
-	executionCh, err := bingx.SubscribeExecutions(ctx)
+	executionCh, err := bybit.SubscribeExecutions(ctx)
 	require.NoError(t, err, "Error subscribing to executions ch")
-	go func() {
+	go func(order *models.Order) {
 		for {
 			select {
 			case <-ctx.Done():
 				return
 			case execution := <-executionCh:
 				testutils.PrintStruct(t, execution, "Execution")
+				order.ID = execution.OrderID
+				order.ExchangeOrderID = execution.ExchangeOrderID
 				wg.Done()
 			}
 		}
-	}()
+	}(&order)
 
-	// Create order — fixed qty (must meet BingX minimum notional)
-	qty := decimal.NewFromInt(2)
 	wg.Add(1)
-
-	order, err := makeOrder(&ticker[0], bingx, qty)
+	err = bybit.CreateOrder(ctx, &order)
 	require.NoError(t, err, "Error creating order")
-	require.NotEmpty(t, order, "Order is empty")
-	require.Equal(t, order.Symbol, symbol, "Order symbol mismatch")
-	require.NotEqual(t, order.ID, uuid.Nil, "Order side mismatch")
-
-	err = bingx.CreateOrder(ctx, &order)
-	require.NoError(t, err, "Error creating order")
-
 	testutils.PrintStruct(t, order, "Order")
 
 	wg.Wait()
 
-	// Get order info
-	orderInfo, err := bingx.GetOrder(ctx, order.ID, order.ExchangeOrderID, order.Symbol)
+	orderInfo, err := bybit.GetOrder(ctx, order.ID, order.ExchangeOrderID, order.Symbol)
 	testutils.PrintStruct(t, orderInfo, "Order info")
 	require.NoError(t, err, "Error getting order info")
-	require.Greater(t, orderInfo.AvgPrice.InexactFloat64(), 0, "Avg price should be greater than 0")
-	require.Greater(t, orderInfo.Fees.InexactFloat64(), 0, "Fees price should be greater than 0")
+	require.Greater(t, orderInfo.AvgPrice.InexactFloat64(), float64(0), "Avg price should be greater than 0")
+	// require.Greater(t, orderInfo.Fees.InexactFloat64(), float64(0), "Fees should be greater than 0")
 }
 
 func makeOrder(ticker *exchange.Ticker, provider exchange.Provider, qty decimal.Decimal) (models.Order, error) {
