@@ -11,6 +11,7 @@ import (
 
 	"github.com/rs/zerolog"
 	"github.com/shopspring/decimal"
+	"gorm.io/gorm"
 
 	"github.com/lucrumx/bot/internal/notifier"
 
@@ -28,6 +29,7 @@ type ArbitrageBot struct {
 	logger              zerolog.Logger
 	clients             []exchange.Provider
 	cfg                 *config.Config
+	db                  *gorm.DB
 	arbitrageSpreadRepo ArbitrageSpreadRepository
 	orderRepo           OrderRepository
 	tradeCount          int64
@@ -40,6 +42,7 @@ func NewBot(
 	logger zerolog.Logger,
 	cfg *config.Config,
 	notify notifier.Notifier,
+	db *gorm.DB,
 	arbitrageSpreadRepo ArbitrageSpreadRepository,
 	orderRepo OrderRepository,
 ) *ArbitrageBot {
@@ -55,6 +58,7 @@ func NewBot(
 		logger:              logger,
 		clients:             clients,
 		cfg:                 cfg,
+		db:                  db,
 		arbitrageSpreadRepo: arbitrageSpreadRepo,
 		orderRepo:           orderRepo,
 		engine:              engine,
@@ -306,7 +310,7 @@ func (a *ArbitrageBot) skipExchange() []exchange.Provider {
 		if !ok {
 			restClients = append(restClients, client)
 		} else {
-			a.logger.Info().Msgf("Siletn mode: skip exchange %s", client.GetExchangeName())
+			a.logger.Info().Msgf("Skip exchange %s", client.GetExchangeName())
 		}
 	}
 

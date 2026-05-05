@@ -46,7 +46,7 @@ func main() {
 	arbitrageSpreadRepo := arbitragebot.NewArbitrageSpreadRepository(db)
 	orderRepo := arbitragebot.NewOrderRepository(db)
 
-	bot := arbitragebot.NewBot(clients, logger, cfg, notif, arbitrageSpreadRepo, orderRepo)
+	bot := arbitragebot.NewBot(clients, logger, cfg, notif, db, arbitrageSpreadRepo, orderRepo)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
