@@ -125,10 +125,6 @@ func validateBeforeCreateOrder(order *models.Order) error {
 		return fmt.Errorf("ByBit client linear (category) market")
 	}
 
-	if order.Type != models.OrderTypeMarket {
-		return fmt.Errorf("ByBit client support only market orders")
-	}
-
 	if order.Quantity.LessThanOrEqual(decimal.NewFromInt(0)) {
 		return fmt.Errorf("ByBit client order quantity must be greater than 0")
 	}

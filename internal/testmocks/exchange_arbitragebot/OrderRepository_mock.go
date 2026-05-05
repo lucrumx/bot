@@ -8,11 +8,10 @@ import (
 	"context"
 
 	"github.com/google/uuid"
-	"github.com/shopspring/decimal"
-	mock "github.com/stretchr/testify/mock"
-
 	"github.com/lucrumx/bot/internal/exchange/arbitragebot"
 	"github.com/lucrumx/bot/internal/models"
+	"github.com/shopspring/decimal"
+	mock "github.com/stretchr/testify/mock"
 )
 
 // NewMockOrderRepository creates a new instance of MockOrderRepository. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.

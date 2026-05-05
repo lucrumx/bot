@@ -86,13 +86,6 @@ func Test_CreateOrder_ValidateBeforeCreate(t *testing.T) {
 		wantErrMsg string
 	}{
 		{
-			name: "only market orders are supported",
-			order: models.Order{
-				Type: models.OrderTypeLimit,
-			},
-			wantErrMsg: "support only market orders",
-		},
-		{
 			name: "quantity must be greater than zero",
 			order: models.Order{
 				Type:     models.OrderTypeMarket,

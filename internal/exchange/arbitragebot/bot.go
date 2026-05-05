@@ -53,7 +53,7 @@ func NewBot(
 	}
 	fmt.Printf("Arbitrage bot silent mode is %s\n", silentModeTxt)
 
-	engine := NewEngine(cfg, clients, orderRepo, arbitrageSpreadRepo, notify, logger)
+	engine := NewEngine(cfg, clients, orderRepo, arbitrageSpreadRepo, notify, logger, MarketStrategy{})
 	return &ArbitrageBot{
 		logger:              logger,
 		clients:             clients,
@@ -89,6 +89,11 @@ type Prices map[string]map[string]PricePoint
 
 // Run starts the arbitrage bot engine.
 func (a *ArbitrageBot) Run(ctx context.Context) error {
+	if err := a.engine.strategy.Validate(); err != nil {
+		a.logger.Fatal().Err(err).Msg("invalid order strategy configuration")
+		return err
+	}
+
 	a.clients = a.skipExchange()
 
 	if len(a.clients) < 2 {

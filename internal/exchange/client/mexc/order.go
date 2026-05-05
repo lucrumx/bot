@@ -125,10 +125,6 @@ func (c *Client) submitOrder(ctx context.Context, order *models.Order, side int)
 }
 
 func validateOrder(order *models.Order) error {
-	if order.Type != models.OrderTypeMarket {
-		return fmt.Errorf("MEXC client supports only market orders")
-	}
-
 	if order.Quantity.LessThanOrEqual(decimal.NewFromInt(0)) {
 		return fmt.Errorf("MEXC client order quantity must be greater than 0")
 	}
