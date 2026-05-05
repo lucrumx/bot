@@ -122,10 +122,6 @@ func (c *Client) submitOrder(ctx context.Context, order *models.Order, query map
 }
 
 func validateBeforeCreateOrder(order *models.Order) error {
-	if order.Type != models.OrderTypeMarket {
-		return fmt.Errorf("BingX client support only market orders")
-	}
-
 	if order.Quantity.LessThanOrEqual(decimal.NewFromInt(0)) {
 		return fmt.Errorf("BingX client order quantity must be greater than 0")
 	}
