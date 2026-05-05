@@ -32,9 +32,19 @@ type OpenPosition struct {
 	BuyConfirmed  bool
 	SellConfirmed bool
 
+	CloseBuyOrderID  uuid.UUID
+	CloseSellOrderID uuid.UUID
+
+	CloseBuyConfirmed  bool
+	CloseSellConfirmed bool
+
 	State PositionState
 }
 
-func (p *OpenPosition) bothConfirmed() bool {
+func (p *OpenPosition) bothOpenConfirmed() bool {
 	return p.BuyConfirmed && p.SellConfirmed
+}
+
+func (p *OpenPosition) bothCloseConfirmed() bool {
+	return p.CloseBuyConfirmed && p.CloseSellConfirmed
 }

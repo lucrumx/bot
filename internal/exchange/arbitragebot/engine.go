@@ -30,10 +30,9 @@ type Engine struct {
 
 	signalCh chan *SpreadEvent
 
-	mu               sync.Mutex
-	positions        map[string]*OpenPosition
-	blacklistedSyms  map[string]struct{} // символы, для которых торговля невозможна (runtime blacklist)
-	chOrdersToUpdate chan uuid.UUID      // channel for order IDs that need to be updated and have their spread profit recalculated
+	mu              sync.Mutex
+	positions       map[string]*OpenPosition
+	blacklistedSyms map[string]struct{} // символы, для которых торговля невозможна (runtime blacklist)
 }
 
 type ordersToOpenClosePosition struct {
@@ -55,17 +54,16 @@ func NewEngine(
 		clientMap[c.GetExchangeName()] = c
 	}
 	return &Engine{
-		cfg:              cfg,
-		clients:          clientMap,
-		instruments:      make(map[string]map[string]exchange.Instrument),
-		orderRepo:        orderRepo,
-		spreadRepo:       spreadRepo,
-		notif:            notif,
-		logger:           logger,
-		signalCh:         make(chan *SpreadEvent, 1000),
-		positions:        make(map[string]*OpenPosition),
-		blacklistedSyms:  make(map[string]struct{}),
-		chOrdersToUpdate: make(chan uuid.UUID, 30),
+		cfg:             cfg,
+		clients:         clientMap,
+		instruments:     make(map[string]map[string]exchange.Instrument),
+		orderRepo:       orderRepo,
+		spreadRepo:      spreadRepo,
+		notif:           notif,
+		logger:          logger,
+		signalCh:        make(chan *SpreadEvent, 1000),
+		positions:       make(map[string]*OpenPosition),
+		blacklistedSyms: make(map[string]struct{}),
 	}
 }
 
@@ -133,6 +131,10 @@ func (e *Engine) HandleSignal(events []*SpreadEvent) {
 
 func (e *Engine) handleOpen(ctx context.Context, event *SpreadEvent) {
 	var orders *ordersToOpenClosePosition
+	if _, ok := e.blacklistedSyms[event.Symbol]; ok {
+		return
+	}
+
 	if !e.isSilentMode() {
 		orders = e.openPosition(ctx, event)
 	}
@@ -267,12 +269,7 @@ func (e *Engine) handleClose(ctx context.Context, event *SpreadEvent) {
 }
 
 func (e *Engine) canBeOpened(event *SpreadEvent) bool {
-	if _, ok := e.blacklistedSyms[event.Symbol]; ok {
-		e.logger.Info().Str("symbol", event.Symbol).Msg("execution: symbol is blacklisted, skipping")
-		return false
-	}
-
-	if len(e.positions) == 3 {
+	if len(e.positions) == 1 {
 		e.logger.Info().Msg("execution: already have 3 open positions, skipping new ones")
 		return false
 	}
@@ -430,38 +427,57 @@ func (e *Engine) handleExecution(ctx context.Context, event exchange.OrderExecut
 	defer e.mu.Unlock()
 
 	for _, pos := range e.positions {
-		if pos.State != PositionStateOpening && pos.State != PositionStateOpeningPendingClose {
-			continue
-		}
+		switch pos.State {
+		case PositionStateOpening, PositionStateOpeningPendingClose:
+			if pos.BuyOrderID == event.OrderID {
+				pos.BuyConfirmed = true
+				e.logger.Info().Str("symbol", pos.Symbol).Str("exchange", pos.BuyExchange).Msg("✅ execution: buy leg confirmed")
+				go e.markOrderFilled(ctx, event)
+			} else if pos.SellOrderID == event.OrderID {
+				pos.SellConfirmed = true
+				e.logger.Info().Str("symbol", pos.Symbol).Str("exchange", pos.SellExchange).Msg("✅ execution: sell leg confirmed")
+				go e.markOrderFilled(ctx, event)
+			} else {
+				continue
+			}
 
-		if pos.BuyOrderID == event.OrderID {
-			pos.BuyConfirmed = true
-			e.logger.Info().Str("symbol", pos.Symbol).Str("exchange", pos.BuyExchange).Msg("✅ execution: buy leg confirmed")
-			go e.markOrderFilled(ctx, event)
-		} else if pos.SellOrderID == event.OrderID {
-			pos.SellConfirmed = true
-			e.logger.Info().Str("symbol", pos.Symbol).Str("exchange", pos.SellExchange).Msg("✅ execution: sell leg confirmed")
-			go e.markOrderFilled(ctx, event)
-		} else {
-			continue
-		}
+			if !pos.bothOpenConfirmed() {
+				return
+			}
 
-		e.chOrdersToUpdate <- event.OrderID
+			if pos.State == PositionStateOpeningPendingClose {
+				e.logger.Info().Str("symbol", pos.Symbol).Msg("⚡ execution: both legs confirmed, closing immediately (spread already closed)")
+				pos.State = PositionStateClosing
+				go e.submitCloseLegs(ctx, pos)
+			} else {
+				pos.State = PositionStateOpen
+				e.logger.Info().Str("symbol", pos.Symbol).Msg("✅ execution: position open")
+			}
 
-		if !pos.bothConfirmed() {
+			return
+
+		case PositionStateClosing:
+			if pos.CloseBuyOrderID == event.OrderID {
+				pos.CloseBuyConfirmed = true
+				e.logger.Info().Str("symbol", pos.Symbol).Str("exchange", pos.BuyExchange).Msg("✅ execution: close buy leg confirmed")
+				go e.markOrderFilled(ctx, event)
+			} else if pos.CloseSellOrderID == event.OrderID {
+				pos.CloseSellConfirmed = true
+				e.logger.Info().Str("symbol", pos.Symbol).Str("exchange", pos.SellExchange).Msg("✅ execution: close sell leg confirmed")
+				go e.markOrderFilled(ctx, event)
+			} else {
+				continue
+			}
+
+			if !pos.bothCloseConfirmed() {
+				return
+			}
+
+			e.logger.Info().Str("symbol", pos.Symbol).Msg("💰 execution: position fully closed")
+			delete(e.positions, positionKey(pos.Symbol, pos.BuyExchange, pos.SellExchange))
+
 			return
 		}
-
-		if pos.State == PositionStateOpeningPendingClose {
-			e.logger.Info().Str("symbol", pos.Symbol).Msg("⚡ execution: both legs confirmed, closing immediately (spread already closed)")
-			pos.State = PositionStateClosing
-			go e.submitCloseLegs(ctx, pos)
-		} else {
-			pos.State = PositionStateOpen
-			e.logger.Info().Str("symbol", pos.Symbol).Msg("✅ execution: position open")
-		}
-
-		return
 	}
 }
 
@@ -476,21 +492,20 @@ func (e *Engine) submitOpenLegs(ctx context.Context, pos *OpenPosition, buyOrder
 	go func() {
 		defer wg.Done()
 		buyErr = buyClient.CreateOrder(ctx, buyOrder)
+		if buyErr == nil {
+			e.saveOrder(buyOrder)
+		}
 	}()
 
 	go func() {
 		defer wg.Done()
 		sellErr = sellClient.CreateOrder(ctx, sellOrder)
+		if sellErr == nil {
+			e.saveOrder(sellOrder)
+		}
 	}()
 
 	wg.Wait()
-
-	if buyErr == nil {
-		go e.saveOrder(buyOrder)
-	}
-	if sellErr == nil {
-		go e.saveOrder(sellOrder)
-	}
 
 	if buyErr != nil || sellErr != nil {
 		e.logger.Error().
@@ -506,6 +521,21 @@ func (e *Engine) submitOpenLegs(ctx context.Context, pos *OpenPosition, buyOrder
 		e.mu.Unlock()
 
 		e.logger.Warn().Str("symbol", pos.Symbol).Msg("execution: symbol blacklisted after failed open")
+
+		go func() {
+			err := e.spreadRepo.Update(ctx, &models.ArbitrageSpread{
+				Status:    models.ArbitrageSpreadFailed,
+				UpdatedAt: time.Now(),
+			}, FindFilter{
+				Symbol: pos.Symbol,
+				BuyEx:  pos.BuyExchange,
+				SellEx: pos.SellExchange,
+				Status: []models.ArbitrageSpreadStatus{models.ArbitrageSpreadOpened},
+			})
+			if err != nil {
+				e.logger.Warn().Err(err).Str("symbol", pos.Symbol).Msg("execution: failed to update spread status to FAILED")
+			}
+		}()
 
 		if buyErr == nil {
 			go func() {
@@ -553,6 +583,13 @@ func (e *Engine) submitCloseLegs(ctx context.Context, pos *OpenPosition) {
 		return
 	}
 
+	// Сохраняем close order IDs на позицию до отправки ордеров,
+	// чтобы handleExecution мог их найти при получении execution events
+	e.mu.Lock()
+	pos.CloseBuyOrderID = buyOrder.ID
+	pos.CloseSellOrderID = sellOrder.ID
+	e.mu.Unlock()
+
 	var wg sync.WaitGroup
 	wg.Add(2)
 
@@ -560,29 +597,26 @@ func (e *Engine) submitCloseLegs(ctx context.Context, pos *OpenPosition) {
 		defer wg.Done()
 		if err := buyClient.CloseOrder(ctx, &buyOrder); err != nil {
 			e.logger.Error().Err(err).Str("symbol", pos.Symbol).Str("exchange", pos.BuyExchange).Msg("execution: failed to close buy leg")
+			return
 		}
+		e.saveOrder(&buyOrder)
 	}()
 
 	go func() {
 		defer wg.Done()
 		if err := sellClient.CloseOrder(ctx, &sellOrder); err != nil {
 			e.logger.Error().Err(err).Str("symbol", pos.Symbol).Str("exchange", pos.SellExchange).Msg("execution: failed to close sell leg")
+			return
 		}
+		e.saveOrder(&sellOrder)
 	}()
 
 	wg.Wait()
 
-	e.mu.Lock()
-	delete(e.positions, positionKey(pos.Symbol, pos.BuyExchange, pos.SellExchange))
-	e.mu.Unlock()
-
-	e.logger.Info().Str("symbol", pos.Symbol).Msg("💰 execution: position closed")
+	e.logger.Info().Str("symbol", pos.Symbol).Msg("🔻 execution: close orders submitted, waiting for confirmations")
 
 	// update spread, set close order IDs for profit calculation
 	go func() {
-		e.saveOrder(&buyOrder)
-		e.saveOrder(&sellOrder)
-
 		spread, err := e.spreadRepo.FindOne(ctx, FindFilter{
 			Symbol: pos.Symbol,
 			BuyEx:  pos.BuyExchange,
@@ -610,11 +644,7 @@ func (e *Engine) submitCloseLegs(ctx context.Context, pos *OpenPosition) {
 		if err != nil {
 			e.logger.Warn().Err(err).Msgf("failed to update arbitrage spread, symbol: %s, buy exchange: %s, sell exchange: %s",
 				pos.Symbol, pos.BuyExchange, pos.SellExchange)
-			return
 		}
-
-		e.chOrdersToUpdate <- buyOrder.ID
-		e.chOrdersToUpdate <- sellOrder.ID
 	}()
 }
 

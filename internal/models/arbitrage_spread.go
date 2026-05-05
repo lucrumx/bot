@@ -18,6 +18,8 @@ const (
 	ArbitrageSpreadClosed ArbitrageSpreadStatus = "CLOSED"
 	// ArbitrageSpreadUpdated represents an updated arbitrage spread.
 	ArbitrageSpreadUpdated ArbitrageSpreadStatus = "UPDATED"
+	// ArbitrageSpreadFailed represents a spread where order submission failed (e.g. symbol blacklisted).
+	ArbitrageSpreadFailed ArbitrageSpreadStatus = "FAILED"
 )
 
 // ArbitrageSpread represents a spread between two exchanges.
@@ -38,7 +40,7 @@ type ArbitrageSpread struct {
 	MaxSpreadPercent decimal.Decimal       `gorm:"type:decimal(10,4);not null"`
 	Status           ArbitrageSpreadStatus `gorm:"type:varchar(20);not null"`
 
-	Profit decimal.Decimal `gorm:"type:decimal(28,12);null"`
+	Profit *decimal.Decimal `gorm:"type:decimal(28,12);null"`
 
 	OpenBuyOrderID   uuid.UUID `gorm:"type:uuid;"`
 	OpenSellOrderID  uuid.UUID `gorm:"type:uuid;"`
