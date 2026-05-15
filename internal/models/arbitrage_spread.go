@@ -26,7 +26,8 @@ const (
 type ArbitrageSpread struct {
 	ID uuid.UUID `gorm:"type:uuid;default:uuidv7();primaryKey"`
 
-	CreatedAt time.Time `gorm:"index:idx_spread_created_at;default:now()"`
+	CreatedAt time.Time  `gorm:"index:idx_spread_created_at;default:now()"`
+	ClosedAt  *time.Time `gorm:"type:timestamptz;"`
 	UpdatedAt time.Time
 	DeletedAt gorm.DeletedAt `gorm:"index"`
 

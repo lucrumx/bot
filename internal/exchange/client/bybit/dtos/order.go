@@ -36,3 +36,17 @@ const (
 	// OrderTypeMarket represents a constant indicating a market order.
 	OrderTypeMarket OrderType = "Market"
 )
+
+// TimeInForce represents Bybit's time-in-force values for limit orders.
+type TimeInForce string
+
+const (
+	// TimeInForceGTC — Good Till Cancelled.
+	TimeInForceGTC TimeInForce = "GTC"
+	// TimeInForceIOC — Immediate Or Cancel.
+	TimeInForceIOC TimeInForce = "IOC"
+	// TimeInForceFOK — Fill Or Kill.
+	TimeInForceFOK TimeInForce = "FOK"
+	// TimeInForcePostOnly — Post Only (rejects orders that would match as taker).
+	TimeInForcePostOnly TimeInForce = "PostOnly"
+)

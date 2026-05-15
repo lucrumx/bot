@@ -122,10 +122,6 @@ func (c *Client) submitOrder(ctx context.Context, order *models.Order, query map
 }
 
 func validateBeforeCreateOrder(order *models.Order) error {
-	if order.Type != models.OrderTypeMarket {
-		return fmt.Errorf("BingX client support only market orders")
-	}
-
 	if order.Quantity.LessThanOrEqual(decimal.NewFromInt(0)) {
 		return fmt.Errorf("BingX client order quantity must be greater than 0")
 	}
@@ -154,7 +150,7 @@ func mapRequestDataToOrderDTO(order *models.Order, timestamp int64) map[string]s
 		orderType = dtos.OrderTypeLimit
 	}
 
-	return map[string]string{
+	query := map[string]string{
 		"symbol":        denormalizeTickerName(order.Symbol),
 		"side":          string(side),
 		"positionSide":  string(positionSide),
@@ -162,5 +158,27 @@ func mapRequestDataToOrderDTO(order *models.Order, timestamp int64) map[string]s
 		"quantity":      order.Quantity.String(),
 		"clientOrderId": order.ID.String(),
 		"timestamp":     strconv.FormatInt(timestamp, 10),
+	}
+
+	if order.Type == models.OrderTypeLimit {
+		query["price"] = order.Price.String()
+		query["timeInForce"] = string(mapTimeInForce(order.TimeInForce))
+	}
+
+	return query
+}
+
+// mapTimeInForce maps the generic models.TimeInForce to BingX-specific values.
+// Defaults to GTC when unspecified.
+func mapTimeInForce(tif models.TimeInForce) dtos.TimeInForce {
+	switch tif {
+	case models.TimeInForceIOC:
+		return dtos.TimeInForceIOC
+	case models.TimeInForceFOK:
+		return dtos.TimeInForceFOK
+	case models.TimeInForcePostOnly:
+		return dtos.TimeInForcePostOnly
+	default:
+		return dtos.TimeInForceGTC
 	}
 }

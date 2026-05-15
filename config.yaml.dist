@@ -44,6 +44,13 @@ exchange:
     max_age_ms: 60000
     min_spread_percent: 3
     percent_for_close_spread: 0.1
+    silent_mode: false
+    skip_exchanges:
+      - mexc
+    max_spread_percent_for_open: 5
+    # order_mode: limit | market. limit
+    order_mode: market
+    limit_fill_timeout_ms: 1000
 
 notifications:
   telegram:

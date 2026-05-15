@@ -47,14 +47,29 @@ type BotConfig struct {
 	RpsTimerInterval      int           `yaml:"rps_timer_interval"`
 }
 
+// OrderMode selects the order type used when opening arbitrage positions.
+type OrderMode string
+
+const (
+	// OrderModeLimit opens both legs as limit GTC orders with watcher-based timeout cleanup.
+	OrderModeLimit OrderMode = "limit"
+	// OrderModeMarket opens both legs as market orders (no fill timeout watcher).
+	OrderModeMarket OrderMode = "market"
+)
+
 // ArbitrageBotConfig contains configuration for arbitration bot.
 type ArbitrageBotConfig struct {
-	MaxAgeMs                int64    `yaml:"max_age_ms"`
-	MinSpreadPercent        float64  `yaml:"min_spread_percent"`
-	PercentForCloseSpread   float64  `yaml:"percent_for_close_spread"`
-	SilentMode              bool     `yaml:"silent_mode"`
-	SkipExchanges           []string `yaml:"skip_exchanges"`
-	MaxSpreadPercentForOpen float64  `yaml:"max_spread_percent_for_open"`
+	MaxAgeMs                int64     `yaml:"max_age_ms"`
+	MinSpreadPercent        float64   `yaml:"min_spread_percent"`
+	PercentForCloseSpread   float64   `yaml:"percent_for_close_spread"`
+	SilentMode              bool      `yaml:"silent_mode"`
+	SkipExchanges           []string  `yaml:"skip_exchanges"`
+	MaxSpreadPercentForOpen float64   `yaml:"max_spread_percent_for_open"`
+	OrderMode               OrderMode `yaml:"order_mode"`
+	// LimitFillTimeoutMs is how long the bot waits for both limit legs to fill
+	// before cancelling unfilled remainder and emergency-closing partial fills.
+	// Only used when OrderMode == OrderModeLimit.
+	LimitFillTimeoutMs int64 `yaml:"limit_fill_timeout_ms"`
 }
 
 // ManipulationBotConfig contains configuration for spot-vs-perp manipulation detector.

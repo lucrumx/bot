@@ -30,6 +30,7 @@ type Provider interface {
 	SubscribeTrades(ctx context.Context, symbols []string, category Category) (<-chan Trade, error)
 	CreateOrder(ctx context.Context, order *models.Order) error
 	CloseOrder(ctx context.Context, order *models.Order) error
+	CancelOrder(ctx context.Context, orderID uuid.UUID, exchangeOrderID string, symbol string) error
 	GetBalances(ctx context.Context) ([]models.Balance, error)
 	SetLeverage(ctx context.Context, symbol string, leverage int64) error
 	GetOrder(ctx context.Context, orderID uuid.UUID, exchangeOrderID string, symbol string) (ExchangeOrder, error)

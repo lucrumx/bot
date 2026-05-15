@@ -125,10 +125,6 @@ func validateBeforeCreateOrder(order *models.Order) error {
 		return fmt.Errorf("ByBit client linear (category) market")
 	}
 
-	if order.Type != models.OrderTypeMarket {
-		return fmt.Errorf("ByBit client support only market orders")
-	}
-
 	if order.Quantity.LessThanOrEqual(decimal.NewFromInt(0)) {
 		return fmt.Errorf("ByBit client order quantity must be greater than 0")
 	}
@@ -160,7 +156,7 @@ func mapRequestDataToOrderDTO(order *models.Order) map[string]interface{} {
 		market = "spot"
 	}
 
-	return map[string]interface{}{
+	payload := map[string]interface{}{
 		"category":    market,
 		"symbol":      order.Symbol,
 		"side":        string(side),
@@ -168,5 +164,27 @@ func mapRequestDataToOrderDTO(order *models.Order) map[string]interface{} {
 		"qty":         order.Quantity.String(),
 		"orderLinkId": order.ID.String(),
 		//"isLeverage":  0, // если спот и ордер за счет маржи (заемных средств) - должен быть = 1
+	}
+
+	if order.Type == models.OrderTypeLimit {
+		payload["price"] = order.Price.String()
+		payload["timeInForce"] = string(mapTimeInForce(order.TimeInForce))
+	}
+
+	return payload
+}
+
+// mapTimeInForce maps the generic models.TimeInForce to Bybit-specific values.
+// Defaults to GTC when unspecified.
+func mapTimeInForce(tif models.TimeInForce) dtos.TimeInForce {
+	switch tif {
+	case models.TimeInForceIOC:
+		return dtos.TimeInForceIOC
+	case models.TimeInForceFOK:
+		return dtos.TimeInForceFOK
+	case models.TimeInForcePostOnly:
+		return dtos.TimeInForcePostOnly
+	default:
+		return dtos.TimeInForceGTC
 	}
 }

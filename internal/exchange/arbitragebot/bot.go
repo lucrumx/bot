@@ -53,7 +53,10 @@ func NewBot(
 	}
 	fmt.Printf("Arbitrage bot silent mode is %s\n", silentModeTxt)
 
-	engine := NewEngine(cfg, clients, orderRepo, arbitrageSpreadRepo, notify, logger)
+	strategy := newOrderStrategy(cfg)
+	fmt.Printf("Arbitrage bot order mode is %s\n", cfg.Exchange.ArbitrageBot.OrderMode)
+
+	engine := NewEngine(cfg, clients, orderRepo, arbitrageSpreadRepo, notify, logger, strategy)
 	return &ArbitrageBot{
 		logger:              logger,
 		clients:             clients,
@@ -62,6 +65,18 @@ func NewBot(
 		arbitrageSpreadRepo: arbitrageSpreadRepo,
 		orderRepo:           orderRepo,
 		engine:              engine,
+	}
+}
+
+// newOrderStrategy picks the OrderStrategy from config.
+func newOrderStrategy(cfg *config.Config) OrderStrategy {
+	switch cfg.Exchange.ArbitrageBot.OrderMode {
+	case config.OrderModeLimit:
+		return LimitStrategy{
+			FillTimeoutDuration: time.Duration(cfg.Exchange.ArbitrageBot.LimitFillTimeoutMs) * time.Millisecond,
+		}
+	default:
+		return MarketStrategy{}
 	}
 }
 
@@ -89,11 +104,22 @@ type Prices map[string]map[string]PricePoint
 
 // Run starts the arbitrage bot engine.
 func (a *ArbitrageBot) Run(ctx context.Context) error {
+	if err := a.engine.strategy.Validate(); err != nil {
+		a.logger.Fatal().Err(err).Msg("invalid order strategy configuration")
+		return err
+	}
+
 	a.clients = a.skipExchange()
 
 	if len(a.clients) < 2 {
 		return fmt.Errorf("not enough clients: %d", len(a.clients))
 	}
+
+	uniq, notUniqName, uniqNames := checkUniqClient(a.clients)
+	if !uniq {
+		return fmt.Errorf("not uniq clients: %s", notUniqName)
+	}
+	a.logger.Info().Msgf("uniq clients: %s", uniqNames)
 
 	// Start retriving balances
 	balanceStore := newBalanceStore(a.logger)
@@ -109,13 +135,7 @@ func (a *ArbitrageBot) Run(ctx context.Context) error {
 		return fmt.Errorf("failed to subscribe to executions: %w", err)
 	}
 
-	uniq, notUniqName, uniqNames := checkUniqClient(a.clients)
-	if !uniq {
-		return fmt.Errorf("not uniq clients: %s", notUniqName)
-	}
-	a.logger.Info().Msgf("uniq clients: %s", uniqNames)
-
-	commonSymbols := a.engine.CommonSymbols()
+	commonSymbols := commonSymbols(a.engine.Instruments())
 	if len(commonSymbols) < 1 {
 		return fmt.Errorf("no common symbols for exchanges")
 	}
