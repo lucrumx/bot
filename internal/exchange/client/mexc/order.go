@@ -22,8 +22,12 @@ const (
 	mexcSideOpenShort  = 3 // Sell: open short
 	mexcSideCloseLong  = 4 // Sell: close long
 
-	// order types
-	mexcOrderTypeMarket = 5
+	// order types (MEXC merges orderType + timeInForce into a single field)
+	mexcOrderTypeLimit    = 1 // limit (GTC behaviour by default)
+	mexcOrderTypePostOnly = 2 // maker only
+	mexcOrderTypeIOC      = 3 // Immediate Or Cancel
+	mexcOrderTypeFOK      = 4 // Fill Or Kill
+	mexcOrderTypeMarket   = 5 // market
 
 	// margin modes
 	mexcOpenTypeCross = 2
@@ -62,12 +66,14 @@ func (c *Client) CloseOrder(ctx context.Context, order *models.Order) error {
 }
 
 func (c *Client) submitOrder(ctx context.Context, order *models.Order, side int) error {
+	orderType, price := mexcOrderTypeAndPrice(order)
+
 	payload := map[string]interface{}{
 		"symbol":      denormalizeTickerName(order.Symbol),
-		"price":       0,
+		"price":       price,
 		"vol":         order.Quantity.String(),
 		"side":        side,
-		"type":        mexcOrderTypeMarket,
+		"type":        orderType,
 		"openType":    mexcOpenTypeCross,
 		"externalOid": strings.ReplaceAll(order.ID.String(), "-", ""),
 	}
@@ -125,6 +131,10 @@ func (c *Client) submitOrder(ctx context.Context, order *models.Order, side int)
 }
 
 func validateOrder(order *models.Order) error {
+	if order.Type == models.OrderTypeLimit && order.Price.LessThanOrEqual(decimal.Zero) {
+		return fmt.Errorf("MEXC client limit order requires price > 0")
+	}
+
 	if order.Quantity.LessThanOrEqual(decimal.NewFromInt(0)) {
 		return fmt.Errorf("MEXC client order quantity must be greater than 0")
 	}
@@ -138,4 +148,22 @@ func validateOrder(order *models.Order) error {
 	}
 
 	return nil
+}
+
+// mexcOrderTypeAndPrice maps the cross-exchange order type + TimeInForce to MEXC's single
+// numeric `type` field, and returns the price to send (0 for market).
+func mexcOrderTypeAndPrice(order *models.Order) (int, interface{}) {
+	if order.Type == models.OrderTypeMarket {
+		return mexcOrderTypeMarket, 0
+	}
+	switch order.TimeInForce {
+	case models.TimeInForcePostOnly:
+		return mexcOrderTypePostOnly, order.Price.String()
+	case models.TimeInForceIOC:
+		return mexcOrderTypeIOC, order.Price.String()
+	case models.TimeInForceFOK:
+		return mexcOrderTypeFOK, order.Price.String()
+	default: // GTC or empty
+		return mexcOrderTypeLimit, order.Price.String()
+	}
 }

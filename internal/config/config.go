@@ -337,6 +337,17 @@ func validateConfig(cfg *Config) error {
 	if cfg.Exchange.ArbitrageBot.MaxSpreadPercentForOpen <= 0 {
 		cfg.Exchange.ArbitrageBot.MaxSpreadPercentForOpen = 5
 	}
+	switch cfg.Exchange.ArbitrageBot.OrderMode {
+	case OrderModeLimit, OrderModeMarket:
+		// ok
+	case "":
+		cfg.Exchange.ArbitrageBot.OrderMode = OrderModeMarket
+	default:
+		return raiseErrorYAML("Exchange.ArbitrageBot.OrderMode (expected: limit | market)")
+	}
+	if cfg.Exchange.ArbitrageBot.OrderMode == OrderModeLimit && cfg.Exchange.ArbitrageBot.LimitFillTimeoutMs <= 0 {
+		cfg.Exchange.ArbitrageBot.LimitFillTimeoutMs = 1000
+	}
 
 	if cfg.Notifications.Telegram.BotToken == "" {
 		return raiseErrorYAML("Notifications.Telegram.BotToken")

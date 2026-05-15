@@ -10,16 +10,16 @@ import (
 // All methods are safe for concurrent use.
 type PositionManager struct {
 	mu        sync.Mutex
-	positions map[string]*Position      // key → position
-	byOrderID map[uuid.UUID]*Position   // orderID → position (for fast lookup)
-	blacklist map[string]struct{}       // symbol → blacklisted
+	positions map[string]*Position    // key → position
+	byOrderID map[uuid.UUID]*Position // orderID → position (for fast lookup)
+	blacklist map[string]struct{}     // symbol → blacklisted
 }
 
 func newPositionManager() *PositionManager {
 	return &PositionManager{
 		positions: make(map[string]*Position),
 		byOrderID: make(map[uuid.UUID]*Position),
-		blacklist:  make(map[string]struct{}),
+		blacklist: make(map[string]struct{}),
 	}
 }
 

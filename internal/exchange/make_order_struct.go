@@ -18,7 +18,8 @@ type CreateOrderDto struct {
 	Type         models.OrderType
 	Quantity     decimal.Decimal
 	ExchangeName string
-	Price        decimal.Decimal // Only for limit orders
+	Price        decimal.Decimal    // Only for limit orders
+	TimeInForce  models.TimeInForce // Only for limit orders. Empty defaults to GTC at the client layer.
 }
 
 // MakeOrderStruct construnct models.Order
@@ -40,6 +41,7 @@ func MakeOrderStruct(order CreateOrderDto) (models.Order, error) {
 		Side:         order.Side,
 		Type:         order.Type,
 		Price:        order.Price,
+		TimeInForce:  order.TimeInForce,
 		Quantity:     order.Quantity,
 	}, nil
 }

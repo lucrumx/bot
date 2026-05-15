@@ -48,6 +48,20 @@ const (
 	OrderStatusExpired OrderStatus = "EXPIRED"
 )
 
+// TimeInForce represents how long a limit order remains active before it is executed or expires.
+type TimeInForce string
+
+const (
+	// TimeInForceGTC — Good Till Cancelled. Order stays on the book until filled or cancelled.
+	TimeInForceGTC TimeInForce = "GTC"
+	// TimeInForceIOC — Immediate Or Cancel. Fills as much as possible immediately, cancels remainder.
+	TimeInForceIOC TimeInForce = "IOC"
+	// TimeInForceFOK — Fill Or Kill. Fills entirely immediately or cancels the whole order.
+	TimeInForceFOK TimeInForce = "FOK"
+	// TimeInForcePostOnly — only adds liquidity (rejects if would match immediately as taker).
+	TimeInForcePostOnly TimeInForce = "POST_ONLY"
+)
+
 // OrderMarket represents the market type of an order, either spot or linear.
 type OrderMarket string
 
@@ -68,6 +82,7 @@ type Order struct {
 	Market           OrderMarket     `gorm:"type:text;not null"`
 	Side             OrderSide       `gorm:"type:text;not null"`
 	Type             OrderType       `gorm:"type:text;not null"`
+	TimeInForce      TimeInForce     `gorm:"type:text;"`           // Only for limit orders
 	Price            decimal.Decimal `gorm:"type:decimal(28,12);"` // Price for limit order
 	Quantity         decimal.Decimal `gorm:"type:decimal(28,12);not null"`
 	AvgPrice         decimal.Decimal `gorm:"type:decimal(28,12);"` // Average price of the market order

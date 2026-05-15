@@ -34,12 +34,17 @@ func (c *Client) GetInstruments(ctx context.Context) (map[string]exchange.Instru
 		Success bool `json:"success"`
 		Code    int  `json:"code"`
 		Data    []struct {
-			Symbol       string  `json:"symbol"`
-			State        int     `json:"state"` // 0 = enabled
-			VolUnit      float64 `json:"volUnit"`
-			MinVol       float64 `json:"minVol"`
-			PriceUnit    float64 `json:"priceUnit"`
-			ContractSize float64 `json:"contractSize"`
+			Symbol            string  `json:"symbol"`
+			State             int     `json:"state"`             // 0 enabled, 1 delivery, 2 delivered, 3 offline, 4 paused
+			APIAllowed        bool    `json:"apiAllowed"`        // flips to false only on the final delisting day
+			Type              int     `json:"type"`              // 1 normal, 2 suspended
+			FutureType        int     `json:"futureType"`        // 1 perpetual, 2 delivery
+			AutomaticDelivery int     `json:"automaticDelivery"` // for futureType=1: 0 normal, 1 scheduled for delivery (= pre-delisting)
+			DeliveryTime      int64   `json:"deliveryTime"`      // ms, set when AutomaticDelivery=1
+			VolUnit           float64 `json:"volUnit"`
+			MinVol            float64 `json:"minVol"`
+			PriceUnit         float64 `json:"priceUnit"`
+			ContractSize      float64 `json:"contractSize"`
 		} `json:"data"`
 	}
 
@@ -52,10 +57,31 @@ func (c *Client) GetInstruments(ctx context.Context) (map[string]exchange.Instru
 	}
 
 	result := make(map[string]exchange.Instrument, len(raw.Data))
+	var skippedState, skippedAPI, skippedType, skippedPreDelisting int
 	for _, item := range raw.Data {
+		// MEXC keeps `state == 0` (Enabled) during pre-delisting wind-down so existing
+		// positions can be closed. New orders get rejected with code 8823.
 		if item.State != 0 {
+			skippedState++
 			continue
 		}
+		if !item.APIAllowed {
+			skippedAPI++
+			continue
+		}
+		if item.Type != 1 {
+			skippedType++
+			continue
+		}
+		// Pre-delisting marker: a perpetual (futureType=1) that has been scheduled for delivery
+		// (automaticDelivery=1) is in wind-down. CreateOrder will return code 8823 even though
+		// apiAllowed is still true and state is still 0. This catches the announcement window
+		// that the other flags miss.
+		if item.FutureType == 1 && item.AutomaticDelivery == 1 {
+			skippedPreDelisting++
+			continue
+		}
+
 		symbol := normalizeTickerName(item.Symbol)
 
 		contractSize := decimal.NewFromFloat(item.ContractSize)
@@ -71,6 +97,14 @@ func (c *Client) GetInstruments(ctx context.Context) (map[string]exchange.Instru
 			ContractSize: contractSize,
 		}
 	}
+
+	c.logger.Info().
+		Int("kept", len(result)).
+		Int("skipped_state", skippedState).
+		Int("skipped_api_disabled", skippedAPI).
+		Int("skipped_suspended", skippedType).
+		Int("skipped_pre_delisting", skippedPreDelisting).
+		Msg("MEXC instruments loaded")
 
 	return result, nil
 }

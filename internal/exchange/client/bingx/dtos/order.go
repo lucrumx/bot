@@ -30,6 +30,20 @@ const (
 	OrderTypeMarket OrderType = "MARKET"
 )
 
+// TimeInForce represents BingX time-in-force values for limit orders.
+type TimeInForce string
+
+const (
+	// TimeInForceGTC — Good Till Cancelled.
+	TimeInForceGTC TimeInForce = "GTC"
+	// TimeInForceIOC — Immediate Or Cancel.
+	TimeInForceIOC TimeInForce = "IOC"
+	// TimeInForceFOK — Fill Or Kill.
+	TimeInForceFOK TimeInForce = "FOK"
+	// TimeInForcePostOnly — Post Only.
+	TimeInForcePostOnly TimeInForce = "PostOnly"
+)
+
 // OrderDTO represents an order in response.
 type OrderDTO struct {
 	Symbol  string `json:"symbol"`

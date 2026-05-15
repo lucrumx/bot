@@ -41,3 +41,5 @@ config.yaml
 !README.md
 
 .zed
+/.claude/
+/.ai/

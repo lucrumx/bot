@@ -22,6 +22,10 @@ func (c *Client) GetInstruments(ctx context.Context) (map[string]exchange.Instru
 	q := req.URL.Query()
 	q.Set("category", "linear")
 	q.Set("limit", "1000")
+	// Explicit status filter: the v5 default for linear is also "Trading", but make it explicit so
+	// behaviour doesn't change silently if Bybit ever revises the default. Status enum:
+	// PreLaunch / Trading / Delivering / Closed — only Trading is fully open for new orders.
+	q.Set("status", "Trading")
 	req.URL.RawQuery = q.Encode()
 
 	resp, err := c.http.Do(req)
@@ -38,6 +42,7 @@ func (c *Client) GetInstruments(ctx context.Context) (map[string]exchange.Instru
 	var raw response[struct {
 		List []struct {
 			Symbol        string `json:"symbol"`
+			Status        string `json:"status"` // PreLaunch / Trading / Delivering / Closed
 			LotSizeFilter struct {
 				QtyStep     string `json:"qtyStep"`
 				MinOrderQty string `json:"minOrderQty"`
@@ -57,7 +62,15 @@ func (c *Client) GetInstruments(ctx context.Context) (map[string]exchange.Instru
 	}
 
 	result := make(map[string]exchange.Instrument, len(raw.Result.List))
+	var skippedStatus int
 	for _, item := range raw.Result.List {
+		// Belt-and-suspenders: also filter client-side so we don't depend on the API default.
+		// If status=Trading was overridden upstream we'd silently start accepting PreLaunch /
+		// Delivering / Closed contracts; this loop catches that.
+		if item.Status != "Trading" {
+			skippedStatus++
+			continue
+		}
 		volStep, err := decimal.NewFromString(item.LotSizeFilter.QtyStep)
 		if err != nil {
 			return nil, fmt.Errorf("ByBit GetInstruments: invalid qtyStep for %s: %w", item.Symbol, err)
@@ -78,6 +91,11 @@ func (c *Client) GetInstruments(ctx context.Context) (map[string]exchange.Instru
 			ContractSize: decimal.NewFromInt(1),
 		}
 	}
+
+	c.logger.Info().
+		Int("kept", len(result)).
+		Int("skipped_non_trading", skippedStatus).
+		Msg("ByBit instruments loaded")
 
 	return result, nil
 }

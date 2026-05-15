@@ -8,9 +8,10 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	mock "github.com/stretchr/testify/mock"
+
 	"github.com/lucrumx/bot/internal/exchange"
 	"github.com/lucrumx/bot/internal/models"
-	mock "github.com/stretchr/testify/mock"
 )
 
 // NewMockProvider creates a new instance of MockProvider. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.

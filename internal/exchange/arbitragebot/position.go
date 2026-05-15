@@ -6,6 +6,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
+
+	"github.com/lucrumx/bot/internal/models"
 )
 
 // PositionState represents the current state of an arbitrage position.
@@ -28,10 +30,15 @@ const (
 type PositionTransition int
 
 const (
-	TransitionNone          PositionTransition = iota
-	TransitionSubmitClose                      // both open legs confirmed, spread already closed → submit close now
-	TransitionEmergencyClose                   // one open leg failed → emergency close the other
-	TransitionFullyClosed                      // both close legs confirmed → delete position
+
+	// TransitionNone is the default no-op action, indicating no state change is required after the current transition.
+	TransitionNone PositionTransition = iota
+	// TransitionSubmitClose both open legs confirmed, spread already closed → submit close now
+	TransitionSubmitClose
+	// TransitionEmergencyClose one open leg failed → emergency close the other
+	TransitionEmergencyClose
+	// TransitionFullyClosed both close legs confirmed → delete position
+	TransitionFullyClosed
 )
 
 // Position is an active arbitrage position with an explicit state machine.
@@ -39,10 +46,10 @@ const (
 type Position struct {
 	mu sync.Mutex
 
-	Symbol      string
-	BuyExchange string
+	Symbol       string
+	BuyExchange  string
 	SellExchange string
-	QtyCoins    decimal.Decimal // qty in coins (base currency), used for close leg sizing
+	QtyCoins     decimal.Decimal // qty in coins (base currency), used for close leg sizing
 
 	OpenBuyLeg  Leg
 	OpenSellLeg Leg
@@ -162,6 +169,42 @@ func (p *Position) SetCloseLegIDs(buyLeg, sellLeg Leg) {
 	defer p.mu.Unlock()
 	p.CloseBuyLeg = buyLeg
 	p.CloseSellLeg = sellLeg
+}
+
+// SetEmergencyCloseLeg stores one emergency close leg (only one side at a time).
+// Called from the partner-failed / fill-timeout cleanup paths so that the matching
+// execution event can be routed back via pm.byOrderID and the DB row marked filled.
+func (p *Position) SetEmergencyCloseLeg(side models.OrderSide, leg Leg) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if side == models.OrderSideBuy {
+		p.CloseBuyLeg = leg
+	} else {
+		p.CloseSellLeg = leg
+	}
+}
+
+// MarkCleanup transitions the position to PositionStateTimedOut. Used by the partner-failed
+// path (where CreateOrder failed on one leg) so that subsequent execution events for emergency
+// close legs are routed to the cleanup case instead of being misinterpreted as open-leg fills.
+// The fill-timeout watcher reaches TimedOut via OnOpenTimeout — this method is for paths where
+// no timeout fired.
+func (p *Position) MarkCleanup() {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.State = PositionStateTimedOut
+}
+
+// IsOpenLegConfirmed reports whether the given side's open leg already filled (its execution
+// event arrived). Used by cleanup paths to detect "limit was already filled before we tried
+// to cancel it" and switch to emergency market close instead.
+func (p *Position) IsOpenLegConfirmed(side models.OrderSide) bool {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if side == models.OrderSideBuy {
+		return p.OpenBuyLeg.Confirmed
+	}
+	return p.OpenSellLeg.Confirmed
 }
 
 // GetState returns the current state under the mutex.
